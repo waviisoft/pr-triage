@@ -1,15 +1,16 @@
 name: CI
 
-# Validate every PR branch (and any branch push except main, which deploy.yml
-# already covers). This produces the pass/fail checks the dashboard reads back
-# as the "CI failing" / "ready to merge" signals.
+# Validate pull requests. Runs on the pull_request event only, so each commit
+# gets exactly one CI run (no duplicate branch-push run). Pushes to main are
+# covered by deploy.yml, which also tests and builds before publishing. These
+# checks are the pass/fail signals the dashboard reads back as "CI failing" /
+# "ready to merge".
 on:
   pull_request:
-  push:
-    branches-ignore: [main]
 
+# Cancel an in-flight run when a newer commit is pushed to the same PR.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 permissions:
