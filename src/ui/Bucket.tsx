@@ -27,7 +27,7 @@ export function Bucket({
         <div className="empty">{emptyNote ?? EMPTY_MESSAGE[view.bucket]}</div>
       ) : (
         view.groups.map((section) => (
-          <div key={section.group}>
+          <div key={section.group} className="group">
             <div className="group-label">{section.label}</div>
             <div className="rows">
               {section.prs.map((item) => (

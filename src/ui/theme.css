@@ -206,6 +206,61 @@ a {
 .btn-primary:hover {
   filter: brightness(1.06);
 }
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* square icon-only buttons (theme, refresh, settings) */
+.btn-icon {
+  padding: 6px 9px;
+  font-size: 15px;
+  line-height: 1;
+  min-width: 34px;
+  text-align: center;
+}
+.icon-spin {
+  display: inline-block;
+}
+.icon-spin.busy {
+  animation: spin 0.7s linear infinite;
+}
+
+/* dropdown settings menu */
+.menu {
+  position: relative;
+}
+.menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 160px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  padding: 5px;
+  z-index: 20;
+}
+.menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+.menu-item:hover {
+  background: var(--surface-2);
+}
+.menu-item.danger {
+  color: var(--rose);
+}
 :root[data-theme="dark"] .btn-primary,
 .btn-primary {
   color: #0f1117;
@@ -287,16 +342,19 @@ a {
   font-size: 13px;
 }
 
+/* Separate consecutive sub-groups; the first sits under the bucket head's own
+   margin, so only groups that follow another group need the top gap. */
+.group + .group {
+  margin-top: 22px;
+}
+
 .group-label {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-size: 11px;
   font-weight: 650;
   color: var(--text-faint);
-  margin: 16px 0 7px;
-}
-.group-label:first-child {
-  margin-top: 0;
+  margin: 0 0 8px;
 }
 
 .rows {

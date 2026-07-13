@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { buildView, type TriageView } from "../triage/group";
 import {
   fetchTriagePRs,
@@ -139,7 +139,7 @@ export function App() {
             }}
           />
           <button
-            className="btn btn-ghost"
+            className="btn btn-ghost btn-icon"
             title={`Theme: ${theme} (click to change)`}
             aria-label={`Theme: ${theme}. Click to change.`}
             onClick={() => setTheme(NEXT_THEME[theme])}
@@ -147,23 +147,24 @@ export function App() {
             {THEME_ICON[theme]}
           </button>
           <button
-            className="btn"
+            className="btn btn-icon"
+            title="Refresh"
+            aria-label="Refresh"
             onClick={() => void load()}
             disabled={status === "loading"}
           >
-            Refresh
+            <span className={status === "loading" ? "icon-spin busy" : "icon-spin"}>
+              ⟳
+            </span>
           </button>
-          <button
-            className="btn btn-ghost"
-            onClick={() => {
+          <SettingsMenu
+            onForget={() => {
               forgetToken();
               setTokenState(null);
               setView(null);
               setViewer(null);
             }}
-          >
-            Forget token
-          </button>
+          />
         </div>
       </header>
 
@@ -258,5 +259,55 @@ function ScopeSwitcher({
         Go
       </button>
     </form>
+  );
+}
+
+function SettingsMenu({ onForget }: { onForget: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="menu" ref={ref}>
+      <button
+        className="btn btn-ghost btn-icon"
+        title="Settings"
+        aria-label="Settings"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        ⚙
+      </button>
+      {open ? (
+        <div className="menu-panel" role="menu">
+          <button
+            className="menu-item danger"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              onForget();
+            }}
+          >
+            Forget token
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }
