@@ -1,0 +1,39 @@
+name: CI
+
+# Validate pull requests. Runs on the pull_request event only, so each commit
+# gets exactly one CI run (no duplicate branch-push run). Pushes to main are
+# covered by deploy.yml, which also tests and builds before publishing. These
+# checks are the pass/fail signals the dashboard reads back as "CI failing" /
+# "ready to merge".
+on:
+  pull_request:
+
+# Cancel an in-flight run when a newer commit is pushed to the same PR.
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Type-check + production build
+        run: npm run build
