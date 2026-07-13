@@ -77,6 +77,10 @@ export function App() {
   }, [token, scope]);
 
   useEffect(() => {
+    // Fetch on mount and whenever the token/scope changes. load() flips status
+    // to "loading" synchronously — the standard fetch-on-mount transition, not
+    // an accidental cascading render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 

@@ -72,7 +72,8 @@ Your choice is remembered across refreshes. Theme (system / light / dark) is too
 ```bash
 npm install
 npm run dev        # start the dev server
-npm test           # run the triage unit tests
+npm run lint       # ESLint (code-quality check)
+npm test           # run the unit tests
 npm run build      # type-check + production build into dist/
 npm run preview    # serve the production build locally
 ```
