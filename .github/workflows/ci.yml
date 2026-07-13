@@ -1,0 +1,35 @@
+name: CI
+
+# Validate every PR branch (and any branch push except main, which deploy.yml
+# already covers). This produces the pass/fail checks the dashboard reads back
+# as the "CI failing" / "ready to merge" signals.
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Type-check + production build
+        run: npm run build
