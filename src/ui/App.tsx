@@ -35,17 +35,11 @@ function initialTheme(): Theme {
   return "system";
 }
 
-/** Cycle order for the header toggle. */
-const NEXT_THEME: Record<Theme, Theme> = {
-  system: "light",
-  light: "dark",
-  dark: "system",
-};
-const THEME_ICON: Record<Theme, string> = {
-  system: "◐",
-  light: "☀",
-  dark: "☾",
-};
+const THEME_OPTIONS: { value: Theme; label: string; icon: string }[] = [
+  { value: "system", label: "System", icon: "◐" },
+  { value: "light", label: "Light", icon: "☀" },
+  { value: "dark", label: "Dark", icon: "☾" },
+];
 
 export function App() {
   const [token, setTokenState] = useState<string | null>(getToken());
@@ -139,14 +133,6 @@ export function App() {
             }}
           />
           <button
-            className="btn btn-ghost btn-icon"
-            title={`Theme: ${theme} (click to change)`}
-            aria-label={`Theme: ${theme}. Click to change.`}
-            onClick={() => setTheme(NEXT_THEME[theme])}
-          >
-            {THEME_ICON[theme]}
-          </button>
-          <button
             className="btn btn-icon"
             title="Refresh"
             aria-label="Refresh"
@@ -158,6 +144,8 @@ export function App() {
             </span>
           </button>
           <SettingsMenu
+            theme={theme}
+            onTheme={setTheme}
             onForget={() => {
               forgetToken();
               setTokenState(null);
@@ -262,7 +250,15 @@ function ScopeSwitcher({
   );
 }
 
-function SettingsMenu({ onForget }: { onForget: () => void }) {
+function SettingsMenu({
+  theme,
+  onTheme,
+  onForget,
+}: {
+  theme: Theme;
+  onTheme: (t: Theme) => void;
+  onForget: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -296,6 +292,21 @@ function SettingsMenu({ onForget }: { onForget: () => void }) {
       </button>
       {open ? (
         <div className="menu-panel" role="menu">
+          <div className="menu-label">Theme</div>
+          {THEME_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              className="menu-item"
+              role="menuitemradio"
+              aria-checked={theme === opt.value}
+              onClick={() => onTheme(opt.value)}
+            >
+              <span className="menu-check">{theme === opt.value ? "✓" : ""}</span>
+              <span className="menu-icon">{opt.icon}</span>
+              {opt.label}
+            </button>
+          ))}
+          <div className="menu-sep" />
           <button
             className="menu-item danger"
             role="menuitem"
@@ -304,6 +315,7 @@ function SettingsMenu({ onForget }: { onForget: () => void }) {
               onForget();
             }}
           >
+            <span className="menu-check" />
             Forget token
           </button>
         </div>
