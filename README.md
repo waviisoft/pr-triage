@@ -51,8 +51,10 @@ as a pure, exhaustively-tested function.
 3. Grant these read permissions:
    - **Pull requests: Read**
    - **Metadata: Read** (required by GitHub for any repo access)
-   - **Checks: Read** — *optional*, only needed for the CI pass/fail dots. The
-     app works fine without it (those fields are treated as best-effort).
+   - **Commit statuses: Read** (and **Checks: Read** if it appears) — *optional*,
+     only for the CI pass/fail dots. Not **Actions** or **Workflows** (those are
+     for managing/editing workflows, not reading status). The app works fine
+     without these; the CI rollup is best-effort.
 4. Open the app and paste the token. The app checks it, auto-labels it by the
    owner it can reach, and you're in.
 
