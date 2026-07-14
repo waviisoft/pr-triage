@@ -5,9 +5,22 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for filing a bug! **This issue will be public.** Please don't
-        include your GitHub token or any secrets, and avoid pasting private org
-        or repository names unless naming them is necessary to reproduce.
+        Thanks for filing a bug! **This issue will be public**, so please keep
+        confidential information out of it. In particular, avoid sharing:
+
+        - Your **GitHub token** or any other secret or credential.
+        - **Private org or repository names.**
+        - **Pull request titles, descriptions, or branch names** — these often
+          carry product code names, customer names, or other internal details.
+        - **Colleagues' usernames or `@mentions`** (they get pinged, and it can
+          reveal who's involved).
+        - **Full URLs, console output, or network traces**, which can embed any
+          of the above (and even API responses).
+        - **Screenshots that show your PR list or other browser tabs** — crop or
+          redact them first.
+
+        Describe the problem in general terms wherever a real name isn't needed
+        to reproduce it.
   - type: textarea
     id: what-happened
     attributes:

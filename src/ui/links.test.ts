@@ -19,4 +19,17 @@ describe("newBugReportUrl", () => {
       "Foo/1.0 (X; Y) A&B",
     );
   });
+
+  it("pre-selects the scope dropdown by kind only", () => {
+    const org = new URL(newBugReportUrl("UA", "org"));
+    expect(org.searchParams.get("scope")).toBe("A specific org");
+    const repo = new URL(newBugReportUrl("UA", "repo"));
+    expect(repo.searchParams.get("scope")).toBe("A single repo");
+    const all = new URL(newBugReportUrl("UA", "all"));
+    expect(all.searchParams.get("scope")).toBe("Everything accessible to me");
+  });
+
+  it("omits the scope param entirely when no kind is given", () => {
+    expect(new URL(newBugReportUrl("UA")).searchParams.has("scope")).toBe(false);
+  });
 });
