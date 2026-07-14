@@ -293,6 +293,104 @@ a {
   background: var(--border);
   margin: 5px 0;
 }
+
+/* ------------------------------------------------------------- modal / tokens */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 12, 20, 0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 8vh 20px 20px;
+  z-index: 50;
+}
+.modal {
+  width: 100%;
+  max-width: 540px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px 22px 22px;
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.modal-head h2 {
+  font-size: 17px;
+  margin: 0;
+}
+.modal-note {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin: 0 0 16px;
+}
+
+.token-list {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.token-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.token-meta {
+  min-width: 0;
+  flex: 1;
+}
+.token-label {
+  display: block;
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.token-reach {
+  display: block;
+  color: var(--text-dim);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.token-mask {
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.token-remove {
+  flex-shrink: 0;
+  color: var(--rose);
+}
+.token-remove:hover {
+  border-color: var(--rose);
+}
+
+.modal-add {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.modal-add-title {
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin-bottom: 10px;
+}
 :root[data-theme="dark"] .btn-primary,
 .btn-primary {
   color: #0f1117;
