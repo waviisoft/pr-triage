@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newBugReportUrl, safeHref } from "./links";
+import { newBugReportUrl, newFeedbackUrl, safeHref } from "./links";
 
 describe("safeHref", () => {
   it("passes through https and http URLs unchanged", () => {
@@ -43,5 +43,30 @@ describe("newBugReportUrl", () => {
 
   it("never adds a scope param (GitHub can't pre-fill dropdown fields)", () => {
     expect(new URL(newBugReportUrl("UA")).searchParams.has("scope")).toBe(false);
+  });
+});
+
+describe("newFeedbackUrl", () => {
+  it("targets the feedback form and seeds the environment field", () => {
+    const url = new URL(newFeedbackUrl("Mozilla/5.0 (Test) Chrome/1.0"));
+    expect(url.pathname).toBe("/waviisoft/pr-triage/issues/new");
+    expect(url.searchParams.get("template")).toBe("feedback.yml");
+    expect(url.searchParams.get("environment")).toBe(
+      "Mozilla/5.0 (Test) Chrome/1.0",
+    );
+  });
+
+  it("URL-encodes user-agent characters that would break the query", () => {
+    const url = newFeedbackUrl("Foo/1.0 (X; Y) A&B");
+    expect(url).toContain("environment=Foo%2F1.0+%28X%3B+Y%29+A%26B");
+    expect(new URL(url).searchParams.get("environment")).toBe(
+      "Foo/1.0 (X; Y) A&B",
+    );
+  });
+
+  it("never adds dropdown params (GitHub can't pre-fill dropdown fields)", () => {
+    const params = new URL(newFeedbackUrl("UA")).searchParams;
+    expect(params.has("sentiment")).toBe(false);
+    expect(params.has("frequency")).toBe(false);
   });
 });
