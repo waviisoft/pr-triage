@@ -653,7 +653,14 @@ function ScopePicker({
   const options = all?.filter(
     (o) => !has({ kind: addKind, value: o }),
   );
-  const listId = addKind === "org" ? "scope-pop-orgs" : "scope-pop-repos";
+  // Filter the suggestion list by what's typed. A custom list (rather than a
+  // native <datalist>) keeps the dropdown inside the popover and scrollable —
+  // on mobile the native picker floats over and hides the input field.
+  const query = value.trim().toLowerCase();
+  const matches = (options ?? []).filter(
+    (o) => !query || o.toLowerCase().includes(query),
+  );
+  const shown = matches.slice(0, 50);
 
   return (
     <div className="scope-pop" ref={ref} role="dialog" aria-label="Change scope">
@@ -703,7 +710,6 @@ function ScopePicker({
       <input
         ref={inputRef}
         className="field"
-        list={options?.length ? listId : undefined}
         value={value}
         placeholder={
           options?.length
@@ -713,12 +719,7 @@ function ScopePicker({
               : "add a repo (owner/name)"
         }
         aria-label={`Add ${addKind} to triage`}
-        onChange={(e) => {
-          const v = e.target.value;
-          setValue(v);
-          // An exact match to a listed option means it was picked → add it.
-          if (options?.includes(v)) add(v);
-        }}
+        onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
@@ -727,11 +728,24 @@ function ScopePicker({
         }}
       />
       {options?.length ? (
-        <datalist id={listId}>
-          {options.map((o) => (
-            <option key={o} value={o} />
+        <ul className="scope-options" role="listbox">
+          {shown.map((o) => (
+            <li key={o}>
+              <button
+                type="button"
+                className="scope-option"
+                onClick={() => add(o)}
+              >
+                {o}
+              </button>
+            </li>
           ))}
-        </datalist>
+          {shown.length === 0 ? (
+            <li className="scope-option-empty">
+              No matches — press Enter to add “{value.trim()}”.
+            </li>
+          ) : null}
+        </ul>
       ) : null}
       <div className="scope-hint">
         {targets.length
