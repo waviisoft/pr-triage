@@ -20,6 +20,9 @@ const CSP = [
   // only covers any <style>/style="" the bundler emits. script-src stays strict.
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
+  // The PWA manifest (<link rel="manifest">) is same-origin; without this it
+  // falls back to default-src 'none' and the browser blocks it.
+  "manifest-src 'self'",
   "connect-src https://api.github.com",
   "base-uri 'none'",
   "form-action 'none'",
