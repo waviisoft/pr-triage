@@ -19,10 +19,11 @@ vi.mock("../github/client", () => ({
   hasPendingMergeable: () => false,
 }));
 
-import { App } from "./App";
+import { App, RefreshButton } from "./App";
 
 afterEach(() => {
   vi.clearAllMocks();
+  vi.restoreAllMocks();
   localStorage.clear();
 });
 
@@ -48,5 +49,33 @@ describe("App — token management", () => {
       expect(screen.queryByText("Needs my attention")).toBeNull(),
     );
     expect(saveTokens).toHaveBeenCalled();
+  });
+});
+
+describe("RefreshButton — stale note", () => {
+  const BASE = 1_700_000_000_000;
+
+  it("shows when the data was updated once it's over 5 minutes old", () => {
+    vi.spyOn(Date, "now").mockReturnValue(BASE + 6 * 60_000);
+    render(
+      <RefreshButton lastUpdated={BASE} loading={false} onRefresh={() => {}} />,
+    );
+    expect(screen.getByText(/updated 6m ago/i)).toBeTruthy();
+  });
+
+  it("stays hidden while the data is still fresh", () => {
+    vi.spyOn(Date, "now").mockReturnValue(BASE + 4 * 60_000);
+    render(
+      <RefreshButton lastUpdated={BASE} loading={false} onRefresh={() => {}} />,
+    );
+    expect(screen.queryByText(/ago/i)).toBeNull();
+  });
+
+  it("stays hidden before the first load", () => {
+    vi.spyOn(Date, "now").mockReturnValue(BASE);
+    render(
+      <RefreshButton lastUpdated={null} loading={false} onRefresh={() => {}} />,
+    );
+    expect(screen.queryByText(/ago/i)).toBeNull();
   });
 });

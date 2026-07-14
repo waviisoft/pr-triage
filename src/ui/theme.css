@@ -349,6 +349,14 @@ a {
   flex-shrink: 0;
 }
 
+/* Shown beside Refresh once the data is over 5 min old, so a long-open tab
+   makes clear the numbers may be stale. */
+.stale-note {
+  color: var(--amber);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 /* --------------------------------------------------------------- controls */
 
 .btn {
