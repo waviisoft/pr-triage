@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { buildView, type TriageView } from "../triage/group";
 import {
+  fetchCatalog,
   fetchTriagePRs,
   fetchViewerLogin,
   forgetToken,
   getToken,
   hasPendingMergeable,
   setToken,
+  type Catalog,
   type Scope,
 } from "../github/client";
 import { Bucket } from "./Bucket";
@@ -50,6 +52,7 @@ export function App() {
   const [error, setError] = useState("");
   const [pendingRecheck, setPendingRecheck] = useState(false);
   const [theme, setTheme] = useState<Theme>(initialTheme);
+  const [catalog, setCatalog] = useState<Catalog | null>(null);
 
   useEffect(() => {
     // "system" removes the override so `@media (prefers-color-scheme)` governs
@@ -84,6 +87,24 @@ export function App() {
     void load();
   }, [load]);
 
+  // Fetch the token's accessible orgs/repos once per token, to populate the
+  // scope picker. Best-effort: a failure just falls back to free-text entry.
+  // (catalog is cleared in the "Forget token" handler, not here.)
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    fetchCatalog(token)
+      .then((c) => {
+        if (!cancelled) setCatalog(c);
+      })
+      .catch(() => {
+        if (!cancelled) setCatalog(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
   // GitHub computes `mergeable` asynchronously; if anything is still UNKNOWN,
   // re-fetch once shortly after so conflicts settle into place (brief §4).
   useEffect(() => {
@@ -113,6 +134,26 @@ export function App() {
         ? `org:${scope.value}`
         : scope.value;
 
+  // When a scoped view comes back empty, explain why. If the target isn't even
+  // in the token's accessible catalog, that's almost certainly the reason (the
+  // token isn't scoped to it / the org hasn't approved it).
+  const emptyScoped =
+    status === "idle" &&
+    view != null &&
+    view.counts.openTotal === 0 &&
+    scope.kind !== "all";
+  const notInCatalog =
+    catalog != null &&
+    ((scope.kind === "org" && !catalog.orgs.includes(scope.value)) ||
+      (scope.kind === "repo" && !catalog.repos.includes(scope.value)));
+  const accessHint = !emptyScoped
+    ? null
+    : notInCatalog
+      ? `“${scope.value}” isn’t in your token’s accessible ${
+          scope.kind === "org" ? "organizations" : "repositories"
+        }. Fine-grained PATs only reach what they’re explicitly scoped to, and the org owner must approve the token — re-create it with this ${scope.kind} selected and approve it in the org’s settings.`
+      : `No open PRs found for this ${scope.kind}. They may be closed/merged, or the token may lack “Pull requests: Read” here.`;
+
   return (
     <div className="app">
       <header className="header">
@@ -131,6 +172,7 @@ export function App() {
         <div className="header-actions">
           <ScopeSwitcher
             scope={scope}
+            catalog={catalog}
             onApply={(s) => {
               setScope(s);
               localStorage.setItem(SCOPE_KEY, JSON.stringify(s));
@@ -155,6 +197,7 @@ export function App() {
               setTokenState(null);
               setView(null);
               setViewer(null);
+              setCatalog(null);
             }}
           />
         </div>
@@ -162,6 +205,10 @@ export function App() {
 
       {status === "error" ? (
         <div className="banner banner-error">{error}</div>
+      ) : null}
+
+      {accessHint ? (
+        <div className="banner banner-info">{accessHint}</div>
       ) : null}
 
       {view ? (
@@ -206,9 +253,11 @@ export function App() {
 
 function ScopeSwitcher({
   scope,
+  catalog,
   onApply,
 }: {
   scope: Scope;
+  catalog: Catalog | null;
   onApply: (s: Scope) => void;
 }) {
   const [kind, setKind] = useState<Scope["kind"]>(scope.kind);
@@ -224,6 +273,11 @@ function ScopeSwitcher({
     if (v) onApply({ kind, value: v });
   };
 
+  // The token's accessible orgs/repos, offered as a picklist for the field.
+  const options =
+    kind === "org" ? catalog?.orgs : kind === "repo" ? catalog?.repos : undefined;
+  const listId = kind === "org" ? "scope-orgs" : "scope-repos";
+
   return (
     <form className="select-row" onSubmit={apply}>
       <select
@@ -238,14 +292,30 @@ function ScopeSwitcher({
         <option value="repo">repo</option>
       </select>
       {kind !== "all" ? (
-        <input
-          className="field"
-          style={{ width: 170 }}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder={kind === "org" ? "waviisoft" : "owner/name"}
-          aria-label="Scope value"
-        />
+        <>
+          <input
+            className="field"
+            style={{ width: 200 }}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            list={options?.length ? listId : undefined}
+            placeholder={
+              options?.length
+                ? `pick or type — ${options.length} available`
+                : kind === "org"
+                  ? "waviisoft"
+                  : "owner/name"
+            }
+            aria-label="Scope value"
+          />
+          {options?.length ? (
+            <datalist id={listId}>
+              {options.map((o) => (
+                <option key={o} value={o} />
+              ))}
+            </datalist>
+          ) : null}
+        </>
       ) : null}
       <button className="btn" type="submit">
         Go
