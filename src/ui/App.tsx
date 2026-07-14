@@ -267,6 +267,20 @@ export function App() {
     };
   }, [catalogs, involvedRepos, viewer]);
 
+  // Reserve one shared `#number` column width across the whole view, sized to
+  // the widest number actually shown (+1 for the "#"). Keeps every row's title
+  // aligned without over-reserving for digit counts we don't have yet.
+  const numCol = useMemo(() => {
+    let maxDigits = 1;
+    if (view) {
+      for (const b of view.buckets)
+        for (const g of b.groups)
+          for (const item of g.prs)
+            maxDigits = Math.max(maxDigits, String(item.pr.number).length);
+    }
+    return `${maxDigits + 1}ch`;
+  }, [view]);
+
   if (!tokens.length) {
     return <TokenGate onAdd={addToken} />;
   }
@@ -297,7 +311,7 @@ export function App() {
       : `No open PRs found for this ${scope.kind}. They may be closed/merged, or your token may lack “Pull requests: Read” here.`;
 
   return (
-    <div className="app">
+    <div className="app" style={{ "--num-col": numCol } as React.CSSProperties}>
       <header className="header">
         <div>
           <h1>PR Triage</h1>

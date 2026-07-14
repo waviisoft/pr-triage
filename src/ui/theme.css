@@ -653,6 +653,10 @@ a {
   color: var(--text-faint);
   font-size: 13px;
   flex-shrink: 0;
+  /* Shared column sized to the widest #number in the view (set on .app); the
+     number right-aligns so every title starts at the same x. */
+  min-width: var(--num-col, 3ch);
+  text-align: right;
 }
 
 .row-body {
