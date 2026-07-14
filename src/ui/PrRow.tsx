@@ -39,7 +39,7 @@ export function PrRow({ item }: { item: ClassifiedPR }) {
       <div className="row-meta">
         <span className="repo">{pr.repository}</span>
         <span className="sep">·</span>
-        <span className="row-reason">
+        <span>
           {mine ? (
             <span className="you-tag">you</span>
           ) : (

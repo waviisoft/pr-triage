@@ -728,7 +728,7 @@ function ScopePicker({
         }}
       />
       {options?.length ? (
-        <ul className="scope-options" role="listbox">
+        <ul className="scope-options">
           {shown.map((o) => (
             <li key={o}>
               <button
