@@ -330,11 +330,35 @@ async function fetchTriagePRs(
 
   const byUrl = new Map<string, NormalizedPR>();
   for (const list of results) {
-    for (const pr of list) {
-      if (!byUrl.has(pr.url)) byUrl.set(pr.url, pr);
-    }
+    for (const pr of list) upsertPR(byUrl, pr);
   }
   return [...byUrl.values()];
+}
+
+/**
+ * Fold one PR into the deduped map, keyed by `url`. A PR can surface in several
+ * searches and — across tokens — several times over, and the copies are NOT
+ * interchangeable: everything is viewer-relative to the same user (so the review
+ * fields agree), but the permission-sensitive fields differ by token. A
+ * fine-grained PAT can't read check runs (GitHub grants it no Checks permission),
+ * so its `statusCheckRollup` comes back `null`, while a classic PAT on the same PR
+ * returns the real rollup. Keeping whichever copy we saw first would let that
+ * null shadow the real status — so on a collision we merge, preferring the
+ * informative value per field rather than blindly keeping the first.
+ */
+function upsertPR(byUrl: Map<string, NormalizedPR>, pr: NormalizedPR): void {
+  const prev = byUrl.get(pr.url);
+  if (!prev) {
+    byUrl.set(pr.url, pr);
+    return;
+  }
+  byUrl.set(pr.url, {
+    ...prev,
+    // A known rollup beats a null one, whichever copy carried it.
+    statusCheckRollup: prev.statusCheckRollup ?? pr.statusCheckRollup,
+    // Likewise a computed mergeability beats one GitHub hasn't resolved yet.
+    mergeable: prev.mergeable !== "UNKNOWN" ? prev.mergeable : pr.mergeable,
+  });
 }
 
 /** Any visible PR whose mergeability GitHub hasn't computed yet. */
@@ -440,7 +464,7 @@ export async function fetchTriageForTokens(
 
   const byUrl = new Map<string, NormalizedPR>();
   for (const list of lists) {
-    for (const pr of list) if (!byUrl.has(pr.url)) byUrl.set(pr.url, pr);
+    for (const pr of list) upsertPR(byUrl, pr);
   }
   return { prs: [...byUrl.values()], errors };
 }
