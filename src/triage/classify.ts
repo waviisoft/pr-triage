@@ -60,20 +60,28 @@ export function classify(
   const mine = pr.authorLogin === viewerLogin;
 
   if (mine) {
-    // Order matters: first match wins (brief §3).
+    // Order matters: first match wins.
     if (pr.isDraft) return hit(Bucket.NEEDS_ME, Group.DRAFT);
     if (pr.mergeable === "CONFLICTING")
       return hit(Bucket.NEEDS_ME, Group.MERGE_CONFLICT);
     if (pr.statusCheckRollup === "FAILURE")
       return hit(Bucket.NEEDS_ME, Group.CI_FAILING);
-    if (pr.reviewDecision === "CHANGES_REQUESTED")
-      return hit(Bucket.NEEDS_ME, Group.CHANGES_REQUESTED);
     if (pr.reviewDecision === "APPROVED")
       return hit(Bucket.NEEDS_ME, Group.READY_TO_MERGE);
 
-    // reviewDecision is REVIEW_REQUIRED or null from here.
+    // A pending reviewer means the ball is in their court — this is the key
+    // correction to §2's assumption. GitHub does NOT flip `reviewDecision` away
+    // from CHANGES_REQUESTED when you push fixes and re-request review; it stays
+    // CHANGES_REQUESTED while the reviewer goes back into `reviewRequests`. So a
+    // non-empty request list (whether an initial request or a re-request after
+    // changes) means we're waiting on them, not the other way around.
     if (pr.reviewRequests.length > 0)
       return hit(Bucket.WAITING, Group.AWAITING_REVIEW);
+
+    // No pending reviewer. If a change-request is still outstanding, it's on me
+    // to address it and re-request; otherwise the PR is ready but unassigned.
+    if (pr.reviewDecision === "CHANGES_REQUESTED")
+      return hit(Bucket.NEEDS_ME, Group.CHANGES_REQUESTED);
     return hit(Bucket.NEEDS_ME, Group.NO_REVIEWER);
   }
 

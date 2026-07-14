@@ -109,10 +109,10 @@ describe("classify — my PRs (§3, mine)", () => {
     expect(c.group).toBe(Group.NO_REVIEWER);
   });
 
-  // The whole point of §2: pushing fixes + re-requesting must NOT read as
-  // "changes requested". GitHub flips the decision back to REVIEW_REQUIRED and
-  // re-adds the reviewer, so it lands in Waiting/awaiting-review automatically.
-  it("re-requested after pushing fixes → Waiting / awaiting-review, NOT changes-requested", () => {
+  // Pushing fixes + re-requesting must NOT read as "changes requested". If
+  // GitHub flips the decision back to REVIEW_REQUIRED, the re-added reviewer
+  // lands it in Waiting/awaiting-review.
+  it("re-requested after pushing fixes (decision REVIEW_REQUIRED) → Waiting / awaiting-review", () => {
     const c = classify(
       pr({ reviewDecision: "REVIEW_REQUIRED", reviewRequests: [user("alice")] }),
       ME,
@@ -120,6 +120,31 @@ describe("classify — my PRs (§3, mine)", () => {
     expect(c.bucket).toBe(Bucket.WAITING);
     expect(c.group).toBe(Group.AWAITING_REVIEW);
     expect(c.group).not.toBe(Group.CHANGES_REQUESTED);
+  });
+
+  // The real-world case: GitHub does NOT flip the decision — it stays
+  // CHANGES_REQUESTED after you push fixes and re-request. The re-request
+  // (reviewer back in reviewRequests) is what moves it to the reviewer's court.
+  it("changes-requested but reviewer re-requested → Waiting / awaiting-review", () => {
+    const c = classify(
+      pr({
+        reviewDecision: "CHANGES_REQUESTED",
+        reviewRequests: [user("alice")],
+      }),
+      ME,
+    );
+    expect(c.bucket).toBe(Bucket.WAITING);
+    expect(c.group).toBe(Group.AWAITING_REVIEW);
+    expect(c.group).not.toBe(Group.CHANGES_REQUESTED);
+  });
+
+  it("changes-requested with NO pending reviewer → Needs me / changes-requested", () => {
+    const c = classify(
+      pr({ reviewDecision: "CHANGES_REQUESTED", reviewRequests: [] }),
+      ME,
+    );
+    expect(c.bucket).toBe(Bucket.NEEDS_ME);
+    expect(c.group).toBe(Group.CHANGES_REQUESTED);
   });
 });
 
