@@ -22,6 +22,7 @@ import {
   type TokenError,
 } from "../github/client";
 import { Bucket } from "./Bucket";
+import { IconRefresh, IconSettings } from "./icons";
 import { Tile } from "./Tile";
 import { TokenGate } from "./TokenGate";
 import { TokenManager } from "./TokenManager";
@@ -256,9 +257,9 @@ export function App() {
             onClick={() => void load()}
             disabled={status === "loading"}
           >
-            <span className={status === "loading" ? "icon-spin busy" : "icon-spin"}>
-              ⟳
-            </span>
+            <IconRefresh
+              className={status === "loading" ? "icon-spin busy" : "icon-spin"}
+            />
           </button>
           <SettingsMenu
             theme={theme}
@@ -453,7 +454,7 @@ function SettingsMenu({
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
-        ⚙
+        <IconSettings />
       </button>
       {open ? (
         <div className="menu-panel" role="menu">

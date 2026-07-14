@@ -173,8 +173,11 @@ async function graphql<D>(
     throw new GitHubError(`GitHub returned HTTP ${res.status}.`, res.status);
 
   const body = (await res.json()) as GqlResponse<D>;
-  if (body.errors?.length)
-    throw new GitHubError(body.errors.map((e) => e.message).join("; "));
+  if (body.errors?.length) {
+    // Collapse duplicates — GitHub often repeats the same policy error per field.
+    const messages = [...new Set(body.errors.map((e) => e.message))];
+    throw new GitHubError(messages.join("; "));
+  }
   return body;
 }
 
@@ -342,11 +345,15 @@ export function tokensForScope(
   if (scope.kind === "all") return tokens;
   const owner =
     scope.kind === "org" ? scope.value : scope.value.split("/")[0];
+  // Match on what a token demonstrably reaches — the owner appearing among its
+  // orgs or repos. We deliberately don't match on `catalog.login`: every one of
+  // a user's tokens shares that login, so it would select all of them. When
+  // nothing matches (or catalogs haven't loaded), fall back to trying them all.
   const matched = tokens.filter((t) => {
     const c = catalogs[t.id];
     if (!c) return false;
-    if (c.login === owner || c.orgs.includes(owner)) return true;
-    return scope.kind === "repo" && c.repos.includes(scope.value);
+    if (c.orgs.includes(owner)) return true;
+    return c.repos.some((r) => r === scope.value || r.startsWith(`${owner}/`));
   });
   return matched.length ? matched : tokens;
 }

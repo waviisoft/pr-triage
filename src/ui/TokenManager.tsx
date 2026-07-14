@@ -5,6 +5,7 @@ import {
   type TokenEntry,
 } from "../github/client";
 import { AddTokenForm } from "./AddTokenForm";
+import { IconClose } from "./icons";
 
 function mask(token: string): string {
   return token.length > 8 ? `••••${token.slice(-4)}` : "••••";
@@ -60,7 +61,7 @@ export function TokenManager({
             aria-label="Close"
             onClick={onClose}
           >
-            ✕
+            <IconClose />
           </button>
         </div>
 
