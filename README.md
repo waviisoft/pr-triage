@@ -9,8 +9,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A **"whose move is it?"** dashboard for GitHub pull requests. It shows every open
-PR you're involved in — across everything you can access, an org, or a single repo
-— **grouped by whose court the ball is in**, rather than as one flat list.
+PR you're involved in — across everything you can access, or narrowed to one or
+more orgs and repos — **grouped by whose court the ball is in**, rather than as
+one flat list.
 
 GitHub's own `/pulls` view and search qualifiers can filter these sets but can't
 express this grouping in a single view. That grouping is the whole point.
@@ -98,14 +99,18 @@ links to the matching page on GitHub, and the pencil beside it opens a picker to
 switch between:
 
 - **everything** accessible to you (across all your tokens),
-- a specific **org** (e.g. `waviisoft`), or
-- a single **repo** (e.g. `waviisoft/pr-triage`).
+- a specific **org** (e.g. `waviisoft`),
+- a single **repo** (e.g. `waviisoft/pr-triage`), or
+- **several orgs and repos at once** — add as many as you like and the board
+  aggregates them into one view (deduped by PR URL).
 
-Org/repo fields offer a **picklist of what your tokens can reach**. Selecting
-applies immediately — there's no "Go". The scope lives in the **URL**
-(`?scope=…`), so each browser tab holds its **own** filter (open two tabs on
-different repos without them fighting) and a filtered view is bookmarkable. Theme
-(system / light / dark) is remembered too — "system" follows your OS setting live.
+Org/repo fields offer a **picklist of what your tokens can reach**. Pick one and
+it applies immediately — there's no "Go"; add another to watch it too, and the ×
+on a chip drops it. The scope lives in the **URL** (`?scope=…`, a comma-joined
+list when you're watching several), so each browser tab holds its **own** filter
+(open two tabs on different repos without them fighting) and a filtered view is
+bookmarkable. Theme (system / light / dark) is remembered too — "system" follows
+your OS setting live.
 
 ## Local development
 

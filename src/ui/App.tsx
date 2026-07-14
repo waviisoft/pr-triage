@@ -14,10 +14,12 @@ import {
   makeToken,
   resolveLogin,
   saveTokens,
+  scopeTargets,
   suggestLabel,
   tokensForScope,
   type Catalog,
   type Scope,
+  type ScopeTarget,
   type TokenEntry,
   type TokenError,
 } from "../github/client";
@@ -35,22 +37,36 @@ const MAX_MERGE_RECHECKS = 3;
 /** "system" follows the OS live (no override); the others pin a theme. */
 type Theme = "system" | "light" | "dark";
 
-// Scope lives in the URL (`?scope=all|org:x|repo:owner/name`) so each browser
-// tab holds its own filter independently and can be bookmarked/shared. The last
-// choice is also mirrored to localStorage as the default for a fresh tab.
+// Scope lives in the URL (`?scope=all|org:x|repo:owner/name`, or a comma-joined
+// list like `org:x,repo:o/n` for several at once) so each browser tab holds its
+// own filter independently and can be bookmarked/shared. The last choice is also
+// mirrored to localStorage as the default for a fresh tab.
 function scopeToParam(scope: Scope): string {
-  return scope.kind === "all" ? "all" : `${scope.kind}:${scope.value}`;
+  if (scope.kind === "all") return "all";
+  return scopeTargets(scope).map((t) => `${t.kind}:${t.value}`).join(",");
 }
 
-function parseScopeParam(raw: string | null): Scope | null {
-  if (!raw) return null;
-  if (raw === "all") return { kind: "all" };
+function parseTargetToken(raw: string): ScopeTarget | null {
   const i = raw.indexOf(":");
   if (i < 0) return null;
   const kind = raw.slice(0, i);
   const value = raw.slice(i + 1);
   if ((kind === "org" || kind === "repo") && value) return { kind, value };
   return null;
+}
+
+function parseScopeParam(raw: string | null): Scope | null {
+  if (!raw) return null;
+  if (raw === "all") return { kind: "all" };
+  const targets = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map(parseTargetToken)
+    .filter((t): t is ScopeTarget => t != null);
+  if (!targets.length) return null;
+  if (targets.length === 1) return targets[0];
+  return { kind: "multi", targets };
 }
 
 function loadInitialScope(): Scope {
@@ -81,11 +97,17 @@ function persistScope(scope: Scope): void {
 /** The GitHub page that best mirrors a scope, for the scope-line link. */
 function githubUrlForScope(scope: Scope): string {
   if (scope.kind === "repo") return `${GITHUB_BASE}/${scope.value}/pulls`;
-  if (scope.kind === "org")
-    return `${GITHUB_BASE}/pulls?q=${encodeURIComponent(
-      `is:open is:pr archived:false involves:@me org:${scope.value}`,
-    )}`;
-  return `${GITHUB_BASE}/pulls`;
+  const targets = scopeTargets(scope);
+  if (!targets.length) return `${GITHUB_BASE}/pulls`;
+  const qualifiers = targets.map((t) => `${t.kind}:${t.value}`).join(" ");
+  return `${GITHUB_BASE}/pulls?q=${encodeURIComponent(
+    `is:open is:pr archived:false involves:@me ${qualifiers}`,
+  )}`;
+}
+
+/** Short human label for one target, e.g. `org:acme` or `owner/name`. */
+function targetLabel(t: ScopeTarget): string {
+  return t.kind === "org" ? `org:${t.value}` : t.value;
 }
 
 function initialTheme(): Theme {
@@ -253,11 +275,12 @@ export function App() {
   );
 
   // Apply a new scope: update state and persist to the URL (per-tab) +
-  // localStorage. The load effect re-runs off the new scope.
+  // localStorage. The load effect re-runs off the new scope. The picker stays
+  // open on apply so several orgs/repos can be added in one sitting; it's
+  // dismissed explicitly (outside click, Escape, or the pencil).
   const changeScope = useCallback((s: Scope) => {
     setScope(s);
     persistScope(s);
-    setScopePickerOpen(false);
   }, []);
 
   // Scope picker + access hints draw from the union of every token's catalog
@@ -304,30 +327,40 @@ export function App() {
     return <TokenGate onAdd={addToken} />;
   }
 
+  const targets = scopeTargets(scope);
   const scopeLabel =
     scope.kind === "all"
       ? "everything accessible to you"
-      : scope.kind === "org"
-        ? `org:${scope.value}`
-        : scope.value;
+      : targets.map(targetLabel).join(", ");
 
-  // When a scoped view comes back empty, explain why. If the target isn't in any
-  // token's catalog, that's almost certainly the reason (no token is scoped to
-  // it / the org hasn't approved one).
+  // When a scoped view comes back empty, explain why. A target absent from every
+  // token's catalog is almost certainly the reason (no token is scoped to it /
+  // the org hasn't approved one).
   const emptyScoped =
     status === "idle" &&
     view != null &&
     view.counts.openTotal === 0 &&
     scope.kind !== "all";
-  const notInCatalog =
-    mergedCatalog != null &&
-    ((scope.kind === "org" && !mergedCatalog.orgs.includes(scope.value)) ||
-      (scope.kind === "repo" && !mergedCatalog.repos.includes(scope.value)));
+  const inCatalog = (t: ScopeTarget) =>
+    mergedCatalog == null ||
+    (t.kind === "org"
+      ? mergedCatalog.orgs.includes(t.value)
+      : mergedCatalog.repos.includes(t.value));
+  const unreachable =
+    mergedCatalog != null ? targets.filter((t) => !inCatalog(t)) : [];
+  // Only claim "unreachable" when the whole scope is out of reach; a partly
+  // reachable scope that's still empty is better explained by the generic note.
+  const allUnreachable =
+    targets.length > 0 && unreachable.length === targets.length;
   const accessHint = !emptyScoped
     ? null
-    : notInCatalog
-      ? `“${scope.value}” isn’t reachable by any of your tokens. Fine-grained PATs only reach what they’re scoped to, and the org owner must approve them. Add a token scoped to this ${scope.kind} from the ⚙ menu.`
-      : `No open PRs found for this ${scope.kind}. They may be closed/merged, or your token may lack “Pull requests: Read” here.`;
+    : allUnreachable
+      ? targets.length === 1
+        ? `“${targets[0].value}” isn’t reachable by any of your tokens. Fine-grained PATs only reach what they’re scoped to, and the org owner must approve them. Add a token scoped to this ${targets[0].kind} from the ⚙ menu.`
+        : `None of the selected scopes (${unreachable
+            .map(targetLabel)
+            .join(", ")}) are reachable by your tokens. Fine-grained PATs only reach what they’re scoped to, and the org owner must approve them. Add a token for the missing owner from the ⚙ menu.`
+      : `No open PRs found for the selected scope. They may be closed/merged, or your token may lack “Pull requests: Read” here.`;
 
   return (
     <div className="app" style={{ "--num-col": numCol } as React.CSSProperties}>
@@ -370,7 +403,6 @@ export function App() {
                 </a>
               </>
             ) : null}
-            {tokens.length > 1 ? ` · ${tokens.length} tokens` : null}
             {scopePickerOpen ? (
               <ScopePicker
                 scope={scope}
@@ -470,9 +502,11 @@ export function App() {
 }
 
 /**
- * Popover (under the title) for changing what you're triaging. No "Go": picking
- * "Everything" or choosing an org/repo from the list applies immediately;
- * typing a custom value applies on Enter.
+ * Popover (under the title) for changing what you're triaging. No "Go": each
+ * change applies immediately. "Everything" clears the scope; otherwise you build
+ * a set of org/repo targets — pick from the list or type and press Enter to add,
+ * and the × on a chip removes it. Watch several orgs and repos at once by adding
+ * more than one.
  */
 function ScopePicker({
   scope,
@@ -485,10 +519,34 @@ function ScopePicker({
   onApply: (s: Scope) => void;
   onClose: () => void;
 }) {
-  const [kind, setKind] = useState<Scope["kind"]>(scope.kind);
-  const [value, setValue] = useState(scope.kind === "all" ? "" : scope.value);
+  const [addKind, setAddKind] = useState<ScopeTarget["kind"]>(
+    scope.kind === "repo" ? "repo" : "org",
+  );
+  const [value, setValue] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const targets = scopeTargets(scope);
+  const has = (t: ScopeTarget) =>
+    targets.some((x) => x.kind === t.kind && x.value === t.value);
+
+  // Turn a target list back into the narrowest scope: none → everything, one →
+  // a single-target scope (clean label + direct GitHub link), many → multi.
+  const emit = (next: ScopeTarget[]) => {
+    if (!next.length) onApply({ kind: "all" });
+    else if (next.length === 1) onApply(next[0]);
+    else onApply({ kind: "multi", targets: next });
+  };
+
+  const add = (raw: string) => {
+    const v = raw.trim();
+    if (!v) return;
+    const t: ScopeTarget = { kind: addKind, value: v };
+    setValue("");
+    if (!has(t)) emit([...targets, t]);
+  };
+  const remove = (t: ScopeTarget) =>
+    emit(targets.filter((x) => !(x.kind === t.kind && x.value === t.value)));
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -506,17 +564,15 @@ function ScopePicker({
   }, [onClose]);
 
   useEffect(() => {
-    if (kind !== "all") inputRef.current?.focus();
-  }, [kind]);
+    inputRef.current?.focus();
+  }, [addKind]);
 
-  const options =
-    kind === "org" ? catalog?.orgs : kind === "repo" ? catalog?.repos : undefined;
-  const listId = kind === "org" ? "scope-pop-orgs" : "scope-pop-repos";
-
-  const applyValue = (v: string) => {
-    const t = v.trim();
-    if (t && kind !== "all") onApply({ kind, value: t });
-  };
+  const all = addKind === "org" ? catalog?.orgs : catalog?.repos;
+  // Don't offer what's already selected.
+  const options = all?.filter(
+    (o) => !has({ kind: addKind, value: o }),
+  );
+  const listId = addKind === "org" ? "scope-pop-orgs" : "scope-pop-repos";
 
   return (
     <div className="scope-pop" ref={ref} role="dialog" aria-label="Change scope">
@@ -524,7 +580,7 @@ function ScopePicker({
         <button
           type="button"
           className="chip-btn"
-          data-active={kind === "all"}
+          data-active={scope.kind === "all"}
           onClick={() => onApply({ kind: "all" })}
         >
           Everything
@@ -532,60 +588,75 @@ function ScopePicker({
         <button
           type="button"
           className="chip-btn"
-          data-active={kind === "org"}
-          onClick={() => setKind("org")}
+          data-active={addKind === "org"}
+          onClick={() => setAddKind("org")}
         >
           Org
         </button>
         <button
           type="button"
           className="chip-btn"
-          data-active={kind === "repo"}
-          onClick={() => setKind("repo")}
+          data-active={addKind === "repo"}
+          onClick={() => setAddKind("repo")}
         >
           Repo
         </button>
       </div>
-      {kind !== "all" ? (
-        <>
-          <input
-            ref={inputRef}
-            className="field"
-            list={options?.length ? listId : undefined}
-            value={value}
-            placeholder={
-              options?.length
-                ? `pick or type — ${options.length} available`
-                : kind === "org"
-                  ? "organization"
-                  : "owner/name"
-            }
-            aria-label={`${kind} to triage`}
-            onChange={(e) => {
-              const v = e.target.value;
-              setValue(v);
-              // An exact match to a listed option means it was picked → apply.
-              if (options?.includes(v)) applyValue(v);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                applyValue(value);
-              }
-            }}
-          />
-          {options?.length ? (
-            <datalist id={listId}>
-              {options.map((o) => (
-                <option key={o} value={o} />
-              ))}
-            </datalist>
-          ) : null}
-          <div className="scope-hint">
-            Pick from the list, or type and press Enter.
-          </div>
-        </>
+      {targets.length ? (
+        <div className="scope-tags">
+          {targets.map((t) => (
+            <span className="scope-tag" key={`${t.kind}:${t.value}`}>
+              {targetLabel(t)}
+              <button
+                type="button"
+                className="scope-tag-x"
+                aria-label={`Remove ${t.value}`}
+                onClick={() => remove(t)}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
       ) : null}
+      <input
+        ref={inputRef}
+        className="field"
+        list={options?.length ? listId : undefined}
+        value={value}
+        placeholder={
+          options?.length
+            ? `add ${addKind} — pick or type (${options.length} available)`
+            : addKind === "org"
+              ? "add an organization"
+              : "add a repo (owner/name)"
+        }
+        aria-label={`Add ${addKind} to triage`}
+        onChange={(e) => {
+          const v = e.target.value;
+          setValue(v);
+          // An exact match to a listed option means it was picked → add it.
+          if (options?.includes(v)) add(v);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            add(value);
+          }
+        }}
+      />
+      {options?.length ? (
+        <datalist id={listId}>
+          {options.map((o) => (
+            <option key={o} value={o} />
+          ))}
+        </datalist>
+      ) : null}
+      <div className="scope-hint">
+        {targets.length
+          ? "Add more to watch several orgs and repos at once, or × to remove."
+          : "Pick from the list, or type and press Enter. Add more than one to watch several at once."}
+      </div>
     </div>
   );
 }

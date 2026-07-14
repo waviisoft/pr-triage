@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   fetchTriageForTokens,
   ownersOf,
+  scopeTargets,
   suggestLabel,
   tokensForScope,
   type Catalog,
@@ -36,6 +37,27 @@ describe("suggestLabel (auto-label from the token's scoped owner)", () => {
   });
   it("no visible repos → the account login", () => {
     expect(suggestLabel(cat("andy", ["acme"], []))).toBe("andy");
+  });
+});
+
+describe("scopeTargets", () => {
+  it("'everything' flattens to no targets", () => {
+    expect(scopeTargets({ kind: "all" })).toEqual([]);
+  });
+  it("a single org/repo flattens to one target", () => {
+    expect(scopeTargets({ kind: "org", value: "acme" })).toEqual([
+      { kind: "org", value: "acme" },
+    ]);
+    expect(scopeTargets({ kind: "repo", value: "o/n" })).toEqual([
+      { kind: "repo", value: "o/n" },
+    ]);
+  });
+  it("a multi scope returns its targets", () => {
+    const targets = [
+      { kind: "org", value: "acme" } as const,
+      { kind: "repo", value: "o/n" } as const,
+    ];
+    expect(scopeTargets({ kind: "multi", targets })).toEqual(targets);
   });
 });
 
@@ -76,6 +98,36 @@ describe("tokensForScope (routing)", () => {
       A,
       B,
     ]);
+  });
+  it("a multi scope routes to every token that reaches any target", () => {
+    // waviisoft → A, shuffletix → B: a scope covering both needs both tokens.
+    expect(
+      tokensForScope(
+        {
+          kind: "multi",
+          targets: [
+            { kind: "org", value: "waviisoft" },
+            { kind: "repo", value: "shuffletix/jotit" },
+          ],
+        },
+        [A, B],
+        catalogs,
+      ),
+    ).toEqual([A, B]);
+    // A multi scope where only one target is reachable routes to just that token.
+    expect(
+      tokensForScope(
+        {
+          kind: "multi",
+          targets: [
+            { kind: "org", value: "waviisoft" },
+            { kind: "org", value: "unreachable" },
+          ],
+        },
+        [A, B],
+        catalogs,
+      ),
+    ).toEqual([A]);
   });
 });
 
@@ -175,6 +227,55 @@ describe("fetchTriageForTokens (aggregation)", () => {
     );
     expect(prs.map((p) => p.url)).toContain("https://github.com/o/r/pull/p1");
     expect(errors).toHaveLength(0);
+  });
+
+  it("fans a multi scope out into a per-target search and dedupes across targets", async () => {
+    const queries: string[] = [];
+    // Every search returns the same PR, so a correct dedupe collapses them to one.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: { body: string }) => {
+        const { variables } = JSON.parse(init.body) as {
+          variables: { q: string };
+        };
+        queries.push(variables.q);
+        return new Response(
+          JSON.stringify({
+            data: {
+              search: {
+                pageInfo: { hasNextPage: false, endCursor: null },
+                nodes: [node("only")],
+              },
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }),
+    );
+
+    const { prs, errors } = await fetchTriageForTokens(
+      [{ id: "A", label: "andy", token: "ta" }],
+      {
+        kind: "multi",
+        targets: [
+          { kind: "org", value: "acme" },
+          { kind: "repo", value: "o/n" },
+        ],
+      },
+      "me",
+    );
+
+    expect(errors).toHaveLength(0);
+    // Collapsed to one PR despite surfacing in every search.
+    expect(prs.map((p) => p.url)).toEqual(["https://github.com/o/r/pull/only"]);
+    // Each target contributes its own qualifiers (3 involved + 1 unclaimed).
+    expect(queries.some((q) => q.includes("org:acme"))).toBe(true);
+    expect(queries.some((q) => q.includes("repo:o/n"))).toBe(true);
+    expect(queries.some((q) => q.includes("review:none") && q.includes("org:acme"))).toBe(true);
+    // Targets are searched independently — no query mixes both qualifiers.
+    expect(
+      queries.every((q) => !(q.includes("org:acme") && q.includes("repo:o/n"))),
+    ).toBe(true);
   });
 
   it("treats a null-data response with errors as a real failure", async () => {
