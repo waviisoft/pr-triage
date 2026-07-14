@@ -147,6 +147,8 @@ export function App() {
   // lack). Accumulates across loads so the picker only grows within a session.
   const [involvedRepos, setInvolvedRepos] = useState<string[]>([]);
   const [showManager, setShowManager] = useState(false);
+  // Tokens whose catalog is being re-fetched, so the manager can show progress.
+  const [refreshing, setRefreshing] = useState<string[]>([]);
 
   // Read the latest catalogs inside load() without making it a dependency
   // (which would refetch triage every time a catalog resolves).
@@ -256,6 +258,30 @@ export function App() {
       setCatalogs((prev) => ({ ...prev, [entry.id]: catalog }));
     },
     [tokens],
+  );
+
+  // Re-fetch a single token's catalog to pick up access it gained since it was
+  // added (e.g. a permission granted, or a repo/org newly approved for the PAT).
+  // Refreshes the scope picker + this token's repo list, and reloads the board
+  // so any newly reachable PRs appear.
+  const refreshToken = useCallback(
+    async (id: string) => {
+      const entry = tokens.find((t) => t.id === id);
+      if (!entry) return;
+      setRefreshing((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      try {
+        const catalog = await fetchCatalog(entry.token);
+        setCatalogs((prev) => ({ ...prev, [id]: catalog }));
+        mergeRechecks.current = 0;
+        void load();
+      } catch {
+        // Leave the existing catalog in place; a transient/failed refresh
+        // shouldn't blank out what we already know the token can reach.
+      } finally {
+        setRefreshing((prev) => prev.filter((x) => x !== id));
+      }
+    },
+    [tokens, load],
   );
 
   const removeToken = useCallback(
@@ -486,8 +512,10 @@ export function App() {
         <TokenManager
           tokens={tokens}
           catalogs={catalogs}
+          refreshing={refreshing}
           onAdd={addToken}
           onRemove={removeToken}
+          onRefresh={refreshToken}
           onPickRepo={(repo) => {
             changeScope({ kind: "repo", value: repo });
             setShowManager(false);
