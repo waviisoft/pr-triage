@@ -1,0 +1,47 @@
+name: Bug report
+description: Something isn't working as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug! Please don't include your GitHub token or any
+        secrets in this report.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you see, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to '…'
+        2. Click '…'
+        3. See '…'
+    validations:
+      required: true
+  - type: input
+    id: scope
+    attributes:
+      label: Scope
+      description: Were you on "everything", an org, or a repo? (No token values, please.)
+  - type: input
+    id: environment
+    attributes:
+      label: Browser & OS
+      placeholder: e.g. Chrome 126 on macOS 15
+  - type: input
+    id: token-type
+    attributes:
+      label: Token type
+      description: Fine-grained or classic? Which permissions/owner? (No token values.)
+  - type: textarea
+    id: console
+    attributes:
+      label: Console errors
+      description: Any errors in the browser dev-tools console (redact anything sensitive).
+      render: shell

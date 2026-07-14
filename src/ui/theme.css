@@ -1,4 +1,4 @@
-/* Design tokens (brief §8). Cool neutrals with a faint blue bias. Themed via
+/* Design tokens. Cool neutrals with a faint blue bias. Themed via
    custom properties; components style through tokens only. Light is the default;
    dark applies via prefers-color-scheme AND an explicit [data-theme] override so
    the header toggle can win over the system setting in both directions. */
@@ -409,9 +409,6 @@ a {
   color: var(--accent);
   font-weight: 600;
 }
-.menu-item.danger {
-  color: var(--rose);
-}
 .menu-check {
   width: 12px;
   flex-shrink: 0;
@@ -589,12 +586,6 @@ a {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
   border-color: var(--accent);
-}
-
-.select-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
 }
 
 /* ------------------------------------------------------------------ tiles */
