@@ -23,8 +23,10 @@ describe("WelcomePage", () => {
     expect(screen.queryByLabelText(/GitHub token/i)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /add a token/i }));
-    await screen.findByRole("dialog", { name: /add a token/i });
+    const dialog = await screen.findByRole("dialog", { name: /add a token/i });
     expect(screen.getByLabelText(/GitHub token/i)).toBeTruthy();
+    // Focus moved into the dialog on open (a11y).
+    expect(dialog.contains(document.activeElement)).toBe(true);
 
     // Escape dismisses the modal.
     fireEvent.keyDown(document, { key: "Escape" });

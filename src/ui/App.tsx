@@ -274,8 +274,11 @@ export function App() {
       setTokens(next);
       saveTokens(next);
       setCatalogs((prev) => ({ ...prev, [entry.id]: catalog }));
+      // Adding a real token means the user is done sampling: leave demo mode so
+      // the board loads their actual PRs instead of quietly staying on fixtures.
+      if (demo) exitDemo();
     },
-    [tokens],
+    [tokens, demo, exitDemo],
   );
 
   // Re-fetch a single token's catalog to pick up access it gained since it was
@@ -407,7 +410,7 @@ export function App() {
     status === "idle" &&
     view != null &&
     view.counts.openTotal === 0 &&
-    scope.kind !== "all";
+    viewScope.kind !== "all";
   const inCatalog = (t: ScopeTarget) =>
     mergedCatalog == null ||
     (t.kind === "org"
