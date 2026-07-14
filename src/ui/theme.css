@@ -607,6 +607,7 @@ a {
   border: 1px solid currentColor;
   border-radius: 5px;
   padding: 0 5px;
+  margin-right: 7px;
   font-size: 10.5px;
   font-weight: 650;
   text-transform: uppercase;
