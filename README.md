@@ -1,4 +1,8 @@
-# pr-triage
+<div align="center">
+  <img src="public/icon-512.png" alt="PR Triage" width="96" height="96" />
+  <h1>pr-triage</h1>
+  <p><strong>Whose move is it?</strong> — a triage board for your open GitHub pull requests.</p>
+</div>
 
 [![CI](https://github.com/waviisoft/pr-triage/actions/workflows/ci.yml/badge.svg)](https://github.com/waviisoft/pr-triage/actions/workflows/ci.yml)
 [![Deploy](https://github.com/waviisoft/pr-triage/actions/workflows/deploy.yml/badge.svg)](https://github.com/waviisoft/pr-triage/actions/workflows/deploy.yml)
