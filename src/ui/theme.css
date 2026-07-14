@@ -133,10 +133,34 @@ a {
 
 /* ------------------------------------------------------------------ layout */
 
+/* Column layout so the footer sticks to the bottom on short pages (the gate). */
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
 .app {
   max-width: 940px;
+  width: 100%;
   margin: 0 auto;
-  padding: 28px 20px 80px;
+  padding: 28px 20px 44px;
+}
+
+.app-footer {
+  margin-top: auto;
+  padding: 20px 20px 30px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 12px;
+}
+.app-footer a {
+  color: var(--text-dim);
+  border-bottom: 1px solid transparent;
+}
+.app-footer a:hover {
+  color: var(--accent);
+  border-bottom-color: currentColor;
 }
 
 /* "View on GitHub" corner ribbon, fixed to the top-right of the viewport.
