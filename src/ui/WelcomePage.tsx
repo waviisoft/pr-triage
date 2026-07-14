@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AddTokenForm } from "./AddTokenForm";
-import { IconClose, IconLogo } from "./icons";
+import { IconLogo } from "./icons";
+import { Modal } from "./Modal";
 
 const BASE = import.meta.env.BASE_URL;
 const SHOT_ALT =
@@ -105,42 +106,16 @@ function AddTokenModal({
   onAdd: (label: string, token: string) => Promise<void>;
   onClose: () => void;
 }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   return (
-    <div className="modal-overlay" onMouseDown={onClose}>
-      <div
-        className="modal"
-        role="dialog"
-        aria-label="Add a token"
-        aria-modal="true"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="modal-head">
-          <h2>Add a token</h2>
-          <button
-            className="btn btn-ghost btn-icon"
-            aria-label="Close"
-            onClick={onClose}
-          >
-            <IconClose />
-          </button>
-        </div>
-        <p className="modal-note">
-          Everything runs in your browser and the token never leaves it — stored
-          in <code>localStorage</code>, sent only to <code>api.github.com</code>.
-          A fine-grained PAT with <code>Pull requests: Read</code> and{" "}
-          <code>Metadata: Read</code> is enough (add{" "}
-          <code>Commit statuses: Read</code> for CI dots).
-        </p>
-        <AddTokenForm onAdd={onAdd} submitLabel="Save token" showCreateLink />
-      </div>
-    </div>
+    <Modal title="Add a token" onClose={onClose}>
+      <p className="modal-note">
+        Everything runs in your browser and the token never leaves it — stored in{" "}
+        <code>localStorage</code>, sent only to <code>api.github.com</code>. A
+        fine-grained PAT with <code>Pull requests: Read</code> and{" "}
+        <code>Metadata: Read</code> is enough (add{" "}
+        <code>Commit statuses: Read</code> for CI dots).
+      </p>
+      <AddTokenForm onAdd={onAdd} submitLabel="Save token" showCreateLink />
+    </Modal>
   );
 }
