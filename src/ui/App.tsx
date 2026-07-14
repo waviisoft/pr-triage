@@ -66,6 +66,10 @@ export function App() {
   const [pendingRecheck, setPendingRecheck] = useState(false);
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const [catalogs, setCatalogs] = useState<Record<string, Catalog>>({});
+  // Repos observed in results — provably reachable even when the catalog query
+  // can't enumerate them (org repos need org-membership visibility the token may
+  // lack). Accumulates across loads so the picker only grows within a session.
+  const [involvedRepos, setInvolvedRepos] = useState<string[]>([]);
   const [showManager, setShowManager] = useState(false);
 
   // Read the latest catalogs inside load() without making it a dependency
@@ -93,6 +97,11 @@ export function App() {
       const use = tokensForScope(scope, tokens, catalogsRef.current);
       const { prs, errors } = await fetchTriageForTokens(use, scope, login);
       setView(buildView(prs, login));
+      setInvolvedRepos((prev) => {
+        const seen = new Set(prev);
+        for (const p of prs) seen.add(p.repository);
+        return [...seen].sort();
+      });
       setTokenErrors(errors);
       setPendingRecheck(hasPendingMergeable(prs));
       setStatus("idle");
@@ -170,6 +179,7 @@ export function App() {
         delete c[id];
         return c;
       });
+      setInvolvedRepos([]);
       if (!next.length) {
         setView(null);
         setViewer(null);
@@ -179,22 +189,31 @@ export function App() {
     [tokens],
   );
 
-  // Union of every token's catalog — powers the scope picker + access hints.
+  // Scope picker + access hints draw from the union of every token's catalog
+  // PLUS the repos seen in results. The catalog can't enumerate org repos when
+  // the token lacks org-membership visibility, but those repos still show up in
+  // the PRs we fetch — so fold them in to keep the picker complete. The viewer's
+  // own login is excluded from the org list (you don't `org:` your own account).
   const mergedCatalog = useMemo<Catalog | null>(() => {
     const cs = Object.values(catalogs);
-    if (!cs.length) return null;
+    if (!cs.length && !involvedRepos.length) return null;
     const orgs = new Set<string>();
     const repos = new Set<string>();
     for (const c of cs) {
       c.orgs.forEach((o) => orgs.add(o));
       c.repos.forEach((r) => repos.add(r));
     }
+    for (const full of involvedRepos) {
+      repos.add(full);
+      const owner = full.split("/")[0];
+      if (owner && owner !== viewer) orgs.add(owner);
+    }
     return {
-      login: viewer ?? cs[0].login,
+      login: viewer ?? cs[0]?.login ?? "",
       orgs: [...orgs].sort(),
       repos: [...repos].sort(),
     };
-  }, [catalogs, viewer]);
+  }, [catalogs, involvedRepos, viewer]);
 
   if (!tokens.length) {
     return <TokenGate onAdd={addToken} />;
