@@ -22,7 +22,7 @@ describe("WelcomePage", () => {
     // No token field visible until asked for.
     expect(screen.queryByLabelText(/GitHub token/i)).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: /add a token/i }));
+    fireEvent.click(screen.getByRole("button", { name: /get started/i }));
     const dialog = await screen.findByRole("dialog", { name: /add a token/i });
     expect(screen.getByLabelText(/GitHub token/i)).toBeTruthy();
     // Focus moved into the dialog on open (a11y).
