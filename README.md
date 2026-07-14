@@ -74,7 +74,9 @@ function.
      entry to grant). So with any fine-grained token, Actions-based PRs show *no*
      dot, and only PRs using the legacy **Status API** (covered by *Commit statuses:
      Read*) light up. That's the usual reason one PR shows a status and the rest
-     don't.
+     don't. **Actions** and **Workflows** don't help either — *Actions* reads
+     workflow runs/artifacts (a different API from check runs) and *Workflows* is
+     write access to the workflow files themselves; neither populates the CI rollup.
    - To get **GitHub Actions** CI dots, use a **classic PAT** instead (scope `repo`,
      or `public_repo` for public repos only) — classic tokens can still read check
      runs. Trade-off: classic PATs are broader in scope and some orgs block them
