@@ -19,8 +19,10 @@ export function TokenGate({
           <li>
             A <strong>fine-grained</strong> PAT is simplest and safest — grant
             <code>Pull requests: Read</code> and <code>Metadata: Read</code>.
-            For the CI pass/fail dots, optionally add <code>Commit statuses: Read</code>{" "}
-            (and <code>Checks: Read</code> if shown). It’s scoped to <em>one</em>{" "}
+            For the CI pass/fail dots, also add <code>Checks: Read</code>{" "}
+            (GitHub Actions and most CI report as <em>check runs</em>) and{" "}
+            <code>Commit statuses: Read</code> (older integrations) — grant both, or
+            some PRs show a dot and others don’t. It’s scoped to <em>one</em>{" "}
             owner (your account or one org).
           </li>
           <li>

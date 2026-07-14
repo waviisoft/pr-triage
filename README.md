@@ -65,10 +65,16 @@ function.
 3. Grant these read permissions:
    - **Pull requests: Read**
    - **Metadata: Read** (required by GitHub for any repo access)
-   - **Commit statuses: Read** (and **Checks: Read** if it appears) — *optional*,
-     only for the CI pass/fail dots. Not **Actions** or **Workflows** (those are
-     for managing/editing workflows, not reading status). The app works fine
-     without these; the CI rollup is best-effort.
+   - **Checks: Read** and **Commit statuses: Read** — *optional*, only for the CI
+     pass/fail dots. Grant **both**: the CI rollup is the union of two systems, and
+     which one a PR uses depends on its CI. **GitHub Actions** (and most modern CI)
+     reports as **check runs** — those need **Checks: Read**, and without it those
+     PRs show *no* dot even though CI ran. The legacy **Status API** (older
+     integrations) reports as commit statuses, covered by **Commit statuses: Read**.
+     Granting only one is the usual reason some PRs show a dot and others don't. Not
+     **Actions** or **Workflows** (those are for managing/editing workflows, not
+     reading status). The app works fine without either; the CI rollup is
+     best-effort.
 4. Open the app and paste the token. The app checks it, auto-labels it by the
    owner it can reach, and you're in.
 
