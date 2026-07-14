@@ -5,8 +5,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for filing a bug! Please don't include your GitHub token or any
-        secrets in this report.
+        Thanks for filing a bug! **This issue will be public.** Please don't
+        include your GitHub token or any secrets, and avoid pasting private org
+        or repository names unless naming them is necessary to reproduce.
   - type: textarea
     id: what-happened
     attributes:
@@ -24,11 +25,19 @@ body:
         3. See '…'
     validations:
       required: true
-  - type: input
+  - type: dropdown
     id: scope
     attributes:
       label: Scope
-      description: Were you on "everything", an org, or a repo? (No token values, please.)
+      description: >-
+        Which kind of view were you on? Issues are public — please pick the
+        kind rather than typing a private org or repository name, which you may
+        not want to disclose here. Only share a name if the repo is public and
+        naming it is necessary to reproduce.
+      options:
+        - Everything accessible to me
+        - A specific org
+        - A single repo
   - type: input
     id: environment
     attributes:
@@ -38,7 +47,9 @@ body:
     id: token-type
     attributes:
       label: Token type
-      description: Fine-grained or classic? Which permissions/owner? (No token values.)
+      description: >-
+        Fine-grained or classic, and which permissions were granted? No token
+        values, and no need to name the owner/resource-owner account.
   - type: textarea
     id: console
     attributes:

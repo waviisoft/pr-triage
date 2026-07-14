@@ -1,3 +1,4 @@
+import { IconBug } from "./icons";
 import { newBugReportUrl, REPO_LICENSE_URL, REPO_URL } from "./links";
 
 /** Page footer: copyright, the license (spelled out + linked), a "file a bug"
@@ -14,8 +15,14 @@ export function Footer() {
         MIT License
       </a>
       {" · "}
-      <a href={bugUrl} target="_blank" rel="noreferrer">
-        File a bug
+      <a
+        className="footer-link-icon"
+        href={bugUrl}
+        target="_blank"
+        rel="noreferrer"
+      >
+        <IconBug />
+        <span>File a bug</span>
       </a>
       {" · "}
       <a href={REPO_URL} target="_blank" rel="noreferrer">

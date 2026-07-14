@@ -162,6 +162,20 @@ a {
   color: var(--accent);
   border-bottom-color: currentColor;
 }
+/* Icon + text link: keep the icon centered with the text and move the hover
+   underline onto the text span so the glyph itself isn't underlined. */
+.app-footer a.footer-link-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: none;
+}
+.app-footer a.footer-link-icon span {
+  border-bottom: 1px solid transparent;
+}
+.app-footer a.footer-link-icon:hover span {
+  border-bottom-color: currentColor;
+}
 
 /* "View on GitHub" corner ribbon, fixed to the top-right of the viewport.
    Hidden below a width where it would overlap the header controls. */
