@@ -22,7 +22,7 @@ import {
   type TokenError,
 } from "../github/client";
 import { Bucket } from "./Bucket";
-import { IconPencil, IconRefresh, IconSettings } from "./icons";
+import { IconLogo, IconPencil, IconRefresh, IconSettings } from "./icons";
 import { GITHUB_BASE } from "./links";
 import { Tile } from "./Tile";
 import { TokenGate } from "./TokenGate";
@@ -333,7 +333,10 @@ export function App() {
     <div className="app" style={{ "--num-col": numCol } as React.CSSProperties}>
       <header className="header">
         <div>
-          <h1>PR Triage</h1>
+          <div className="brand">
+            <IconLogo size={30} />
+            <h1>PR Triage</h1>
+          </div>
           <div className="scope-line">
             <a
               className="scope-link"

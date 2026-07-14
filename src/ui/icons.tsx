@@ -37,6 +37,44 @@ export function IconSettings({ size = 18 }: { size?: number }) {
   );
 }
 
+// The app mark: a commit-graph whose three nodes are the triage buckets
+// (needs attention / waiting / ready) in the severity colors, each carrying a
+// PR row. Self-contained (its own gradient + fills), so it ignores currentColor.
+export function IconLogo({ size = 30 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 512 512"
+      role="img"
+      aria-label="PR Triage"
+    >
+      <defs>
+        <linearGradient id="pr-logo-tile" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#4c5ee0" />
+          <stop offset="1" stopColor="#3a49c2" />
+        </linearGradient>
+      </defs>
+      <rect width="512" height="512" rx="112" fill="url(#pr-logo-tile)" />
+      <line
+        x1="152"
+        y1="126"
+        x2="152"
+        y2="386"
+        stroke="#fff"
+        strokeWidth="20"
+        strokeLinecap="round"
+      />
+      <rect x="214" y="141" width="196" height="22" rx="11" fill="#ccd3f1" />
+      <rect x="214" y="245" width="196" height="22" rx="11" fill="#ccd3f1" />
+      <rect x="214" y="349" width="196" height="22" rx="11" fill="#ccd3f1" />
+      <circle cx="152" cy="152" r="30" fill="#ee4d74" stroke="#fff" strokeWidth="18" />
+      <circle cx="152" cy="256" r="30" fill="#f4a52a" stroke="#fff" strokeWidth="18" />
+      <circle cx="152" cy="360" r="30" fill="#21a25e" stroke="#fff" strokeWidth="18" />
+    </svg>
+  );
+}
+
 export function IconClose({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} {...base}>
