@@ -403,7 +403,6 @@ export function App() {
                 </a>
               </>
             ) : null}
-            {tokens.length > 1 ? ` · ${tokens.length} tokens` : null}
             {scopePickerOpen ? (
               <ScopePicker
                 scope={scope}
