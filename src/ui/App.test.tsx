@@ -50,8 +50,8 @@ describe("App — token management", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: /refresh/i })).toBeNull(),
     );
-    // Token entry now lives behind the "Add a token" button (a modal).
-    fireEvent.click(screen.getByRole("button", { name: /add a token/i }));
+    // Token entry now lives behind the "Get started…" button (a modal).
+    fireEvent.click(screen.getByRole("button", { name: /get started/i }));
     expect(await screen.findByLabelText(/GitHub token/i)).toBeTruthy();
     expect(saveTokens).toHaveBeenCalled();
   });

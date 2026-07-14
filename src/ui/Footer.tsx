@@ -1,4 +1,4 @@
-import { IconBug, IconFeedback } from "./icons";
+import { IconBug, IconFeedback, IconGitHub } from "./icons";
 import {
   newBugReportUrl,
   newFeedbackUrl,
@@ -46,8 +46,14 @@ export function Footer() {
         <span>Feedback</span>
       </a>
       {" · "}
-      <a href={REPO_URL} target="_blank" rel="noreferrer">
-        Source on GitHub
+      <a
+        className="footer-link-icon"
+        href={REPO_URL}
+        target="_blank"
+        rel="noreferrer"
+      >
+        <IconGitHub />
+        <span>GitHub</span>
       </a>
     </footer>
   );

@@ -52,11 +52,14 @@ export function WelcomePage({
             </span>
           </div>
           <div className="welcome-cta">
-            <button className="btn btn-primary btn-lg" onClick={onDemo}>
-              ▶ View live demo
+            <button
+              className="btn btn-primary btn-lg"
+              onClick={() => setAdding(true)}
+            >
+              Get started…
             </button>
-            <button className="btn btn-lg" onClick={() => setAdding(true)}>
-              Add a token
+            <button className="btn btn-lg" onClick={onDemo}>
+              ▶ View live demo
             </button>
           </div>
           <p className="welcome-subtle">
