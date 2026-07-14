@@ -56,8 +56,8 @@ function mapReviewers(raw: RawPR): ReviewRequest[] {
 }
 
 /**
- * The viewer's own latest *decisive* review state. Per brief §2 we trust
- * GitHub's computed state for the blocking question, and use raw reviews only to
+ * The viewer's own latest *decisive* review state. We trust GitHub's computed
+ * state for the blocking question, and use raw reviews only to
  * answer "did I review, and how?". Later `COMMENTED`/`PENDING` reviews do not
  * dismiss an earlier approval or change-request, so we ignore them here and take
  * the most recent `APPROVED`/`CHANGES_REQUESTED` the viewer left.

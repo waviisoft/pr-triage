@@ -30,6 +30,8 @@ import { TokenManager } from "./TokenManager";
 
 const SCOPE_KEY = "pr-triage:scope";
 const THEME_KEY = "pr-triage:theme";
+/** How many times to re-poll for a still-UNKNOWN `mergeable` before giving up. */
+const MAX_MERGE_RECHECKS = 3;
 /** "system" follows the OS live (no override); the others pin a theme. */
 type Theme = "system" | "light" | "dark";
 
@@ -87,8 +89,12 @@ function githubUrlForScope(scope: Scope): string {
 }
 
 function initialTheme(): Theme {
-  const saved = localStorage.getItem(THEME_KEY);
-  if (saved === "light" || saved === "dark" || saved === "system") return saved;
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === "light" || saved === "dark" || saved === "system") return saved;
+  } catch {
+    /* ignore */
+  }
   // No explicit choice yet: follow the system theme live via the CSS media query.
   return "system";
 }
@@ -124,12 +130,20 @@ export function App() {
     catalogsRef.current = catalogs;
   }, [catalogs]);
 
+  // Bound the mergeable re-poll so a PR stuck at UNKNOWN can't loop forever.
+  // Reset on every user-initiated load (token/scope change or Refresh).
+  const mergeRechecks = useRef(0);
+
   useEffect(() => {
     // "system" removes the override so `@media (prefers-color-scheme)` governs
     // and tracks OS changes live; light/dark pin the attribute and win over it.
     if (theme === "system") delete document.documentElement.dataset.theme;
     else document.documentElement.dataset.theme = theme;
-    localStorage.setItem(THEME_KEY, theme);
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      /* ignore */
+    }
   }, [theme]);
 
   const load = useCallback(async () => {
@@ -159,6 +173,7 @@ export function App() {
   useEffect(() => {
     // Fetch on mount and whenever the tokens/scope change. load() flips status
     // to "loading" synchronously — the standard fetch-on-mount transition.
+    mergeRechecks.current = 0;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
@@ -187,10 +202,13 @@ export function App() {
   }, [tokens]);
 
   // GitHub computes `mergeable` asynchronously; if anything is still UNKNOWN,
-  // re-fetch once shortly after so conflicts settle into place.
+  // re-fetch shortly after so conflicts settle into place. Bounded to a few
+  // tries — some PRs never leave UNKNOWN and we don't want an endless poll.
   useEffect(() => {
     if (!pendingRecheck || status !== "idle") return;
+    if (mergeRechecks.current >= MAX_MERGE_RECHECKS) return;
     const id = setTimeout(() => {
+      mergeRechecks.current += 1;
       setPendingRecheck(false);
       void load();
     }, 4000);
@@ -365,7 +383,10 @@ export function App() {
             className="btn btn-icon"
             title="Refresh"
             aria-label="Refresh"
-            onClick={() => void load()}
+            onClick={() => {
+              mergeRechecks.current = 0;
+              void load();
+            }}
             disabled={status === "loading"}
           >
             <IconRefresh
@@ -435,9 +456,7 @@ export function App() {
           onAdd={addToken}
           onRemove={removeToken}
           onPickRepo={(repo) => {
-            const s: Scope = { kind: "repo", value: repo };
-            setScope(s);
-            localStorage.setItem(SCOPE_KEY, JSON.stringify(s));
+            changeScope({ kind: "repo", value: repo });
             setShowManager(false);
           }}
           onClose={() => setShowManager(false)}

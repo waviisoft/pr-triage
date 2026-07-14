@@ -1,5 +1,9 @@
 # pr-triage
 
+[![CI](https://github.com/waviisoft/pr-triage/actions/workflows/ci.yml/badge.svg)](https://github.com/waviisoft/pr-triage/actions/workflows/ci.yml)
+[![Deploy](https://github.com/waviisoft/pr-triage/actions/workflows/deploy.yml/badge.svg)](https://github.com/waviisoft/pr-triage/actions/workflows/deploy.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A **"whose move is it?"** dashboard for GitHub pull requests. It shows every open
 PR you're involved in — across everything you can access, an org, or a single repo
 — **grouped by whose court the ball is in**, rather than as one flat list.
@@ -22,8 +26,8 @@ using a read-only token you paste in. Nothing is sent anywhere else.
   - your drafts — finish and mark ready
   - someone else's PR where **your** review is requested
 - **Waiting on others** — you've done your part:
-  - your PR is green with a reviewer requested, awaiting their review (this also
-    covers "pushed fixes and re-requested review" — see below)
+  - your PR with a reviewer requested, awaiting their review (this also covers
+    "pushed fixes and re-requested review" — see below)
   - someone else's PR where **you** requested changes (author's court)
   - someone else's PR you approved
 - **Reviews to pick up** — non-draft PRs by other people with no reviewer and no
@@ -35,12 +39,17 @@ Within each group the most neglected PR (oldest `updatedAt`) surfaces first.
 ### The core insight
 
 PRs are classified from GitHub's **computed `reviewDecision`** plus the current
-requested-reviewers list — *not* by replaying individual review events. When you
-push fixes and re-request review, GitHub flips `reviewDecision` from
-`CHANGES_REQUESTED` back to `REVIEW_REQUIRED` and puts the reviewer back into the
-request list, so such PRs correctly land in **Waiting → awaiting review** with no
-special handling. The rules live in [`src/triage/classify.ts`](src/triage/classify.ts)
-as a pure, exhaustively-tested function.
+requested-reviewers list — *not* by replaying individual review events.
+
+The subtlety that drives the rules: when a reviewer requests changes, you push
+fixes, and re-request their review, GitHub **keeps `reviewDecision` as
+`CHANGES_REQUESTED`** and simply adds the reviewer back to the request list. So
+the request list is what decides whose court it's in — a **pending reviewer**
+(initial request *or* a re-request after changes) means you're **waiting on
+them**; `CHANGES_REQUESTED` only means "your move" when *no* reviewer is currently
+requested. The rules live in
+[`src/triage/classify.ts`](src/triage/classify.ts) as a pure, exhaustively-tested
+function.
 
 ## Setup — create a token
 
@@ -60,7 +69,8 @@ as a pure, exhaustively-tested function.
 
 **Your tokens stay in your browser.** They're kept in `localStorage`, sent only
 to `api.github.com`, and never logged. Manage or remove them anytime from the
-**⚙ → Manage tokens** menu.
+**⚙ → Manage tokens** menu. See [SECURITY.md](SECURITY.md) for the full handling
+model.
 
 ### Triaging across several accounts or orgs
 
@@ -79,18 +89,23 @@ that org's repos.
 
 ## Scope
 
-Use the header switcher to point the dashboard at:
+Change what you're triaging with the control under the title — the scope label
+links to the matching page on GitHub, and the pencil beside it opens a picker to
+switch between:
 
 - **everything** accessible to you (across all your tokens),
 - a specific **org** (e.g. `waviisoft`), or
 - a single **repo** (e.g. `waviisoft/pr-triage`).
 
-Org and repo fields offer a **picklist of what your tokens can reach**. If a
-scoped view is empty and the target isn't reachable by any token, the app says
-so. Your choice is remembered across refreshes, as is the theme (system / light /
-dark) — "system" follows your OS setting live.
+Org/repo fields offer a **picklist of what your tokens can reach**. Selecting
+applies immediately — there's no "Go". The scope lives in the **URL**
+(`?scope=…`), so each browser tab holds its **own** filter (open two tabs on
+different repos without them fighting) and a filtered view is bookmarkable. Theme
+(system / light / dark) is remembered too — "system" follows your OS setting live.
 
 ## Local development
+
+Requires **Node 20.19+ or 22.12+** (Vite 8).
 
 ```bash
 npm install
@@ -100,6 +115,8 @@ npm test           # run the unit tests
 npm run build      # type-check + production build into dist/
 npm run preview    # serve the production build locally
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution workflow.
 
 ## Deploying to GitHub Pages
 
@@ -117,28 +134,35 @@ user/org root or a custom domain, build with `VITE_BASE=/ npm run build`. A
 
 ## Architecture
 
-The rules are isolated from GitHub so they stay testable and reusable:
+The triage rules are isolated from GitHub so they stay pure and testable:
 
 ```
 src/
   triage/      pure classification — no imports from github/, no network
     types.ts       Bucket / Group enums + the normalized PR shape
     classify.ts    classify(pr, viewer) — the rules, first-match-wins
-    classify.test.ts
     group.ts       sort (oldest first) + group into the three buckets
+    *.test.ts      exhaustive table tests for the rules
   github/      the data layer (the only code that knows the GitHub wire format)
-    queries.ts     the GraphQL query
-    client.ts      token handling, fetch, pagination, merge + dedupe by url
-    map.ts         raw GraphQL node -> normalized PR
+    queries.ts     the GraphQL query strings (involved PRs + accessible catalog)
+    client.ts      labeled tokens, fetch, pagination, multi-token aggregation
+    map.ts         raw GraphQL node -> the normalized PR shape
+    *.test.ts      client aggregation + query tests
   ui/          React components + theme.css design tokens (light/dark)
-  main.tsx
+  main.tsx     mounts <App/>, the footer, and the corner sash
 ```
 
-Two searches feed the view: everything you're **involved** in (author, assignee,
-commenter, mentioned, review-requested, reviewed-by — merged and deduped by URL),
-plus **unclaimed** PRs to pick up. One GraphQL query returns `reviewDecision`, the
-requested reviewers, the reviews, and the CI rollup in a single round-trip.
+Per token, several GitHub searches feed the view — everything you're **involved**
+in (author, assignee, commenter, mentioned, review-requested, reviewed-by) plus
+**unclaimed** PRs to pick up — and the results are merged and deduped by URL
+across all your tokens. One query returns `reviewDecision`, the requested
+reviewers, the reviews, and the CI rollup per PR in a single round-trip.
+
+## Contributing
+
+Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and
+our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 
-MIT © WAVIISoft, LLC
+[MIT](LICENSE) © WAVIISoft, LLC

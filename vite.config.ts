@@ -42,7 +42,7 @@ function cspMeta(): Plugin {
 }
 
 // Project Pages are served from https://<org>.github.io/pr-triage/, so the
-// built asset URLs must be prefixed with the repo path or they 404 (see brief §5).
+// built asset URLs must be prefixed with the repo path or they 404.
 // Override with `VITE_BASE=/` when deploying to a user/org root or a custom domain.
 export default defineConfig({
   base: process.env.VITE_BASE ?? "/pr-triage/",

@@ -47,7 +47,11 @@ export function getTokens(): TokenEntry[] {
 }
 
 export function saveTokens(tokens: TokenEntry[]): void {
-  localStorage.setItem(TOKENS_KEY, JSON.stringify(tokens));
+  try {
+    localStorage.setItem(TOKENS_KEY, JSON.stringify(tokens));
+  } catch {
+    /* storage may be unavailable (private mode / quota) — keep in-memory state */
+  }
 }
 
 /** Build a new token entry with a trimmed value and a fresh id. */
@@ -56,7 +60,7 @@ export function makeToken(label: string, token: string): TokenEntry {
 }
 
 // ---------------------------------------------------------------------------
-// Scope + search-string construction (brief §4).
+// Scope + search-string construction.
 // ---------------------------------------------------------------------------
 
 export type Scope =
@@ -65,7 +69,7 @@ export type Scope =
   | { kind: "repo"; value: string };
 
 /** The org/repo qualifier for a scope; empty for "everything accessible to me". */
-export function scopeQualifier(scope: Scope): string {
+function scopeQualifier(scope: Scope): string {
   if (scope.kind === "org") return `org:${scope.value}`;
   if (scope.kind === "repo") return `repo:${scope.value}`;
   return "";
@@ -190,7 +194,7 @@ async function graphql<D>(
 }
 
 /** Resolve the authenticated user's login (needed for client-side classify). */
-export async function fetchViewerLogin(token: string): Promise<string> {
+async function fetchViewerLogin(token: string): Promise<string> {
   const body = await graphql<ViewerData>(token, `query { viewer { login } }`, {});
   const login = body.data?.viewer?.login;
   if (!login) throw new GitHubError("Could not resolve the viewer login.");
@@ -275,7 +279,7 @@ async function runSearch(
  * Fetch the full deduped union of query A (three involved searches) and query B
  * (unclaimed). Dedupe by `url`, since a PR can surface in several searches.
  */
-export async function fetchTriagePRs(
+async function fetchTriagePRs(
   token: string,
   scope: Scope,
   viewerLogin: string,
@@ -298,7 +302,7 @@ export async function fetchTriagePRs(
   return [...byUrl.values()];
 }
 
-/** Any visible PR whose mergeability GitHub hasn't computed yet (brief §4). */
+/** Any visible PR whose mergeability GitHub hasn't computed yet. */
 export function hasPendingMergeable(prs: NormalizedPR[]): boolean {
   return prs.some((pr) => pr.mergeable === "UNKNOWN");
 }

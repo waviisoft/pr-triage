@@ -46,12 +46,12 @@ function viewerIsRequested(pr: NormalizedPR, viewerLogin: string): boolean {
 /**
  * Classify a single PR from the viewer's perspective. Pure, no network.
  *
- * The load-bearing insight (brief §2): we classify from GitHub's *computed*
+ * The load-bearing insight: we classify from GitHub's *computed*
  * `reviewDecision` + the current `reviewRequests` list, NOT by replaying review
- * events. When an author pushes fixes and re-requests review, GitHub flips
- * `reviewDecision` back to `REVIEW_REQUIRED` and re-adds the reviewer to
- * `reviewRequests`, so the "fixes pushed, back in reviewer's court" case falls
- * out of the `awaiting-review` rule for free — no special handling needed.
+ * events. When an author pushes fixes and re-requests review, GitHub re-adds the
+ * reviewer to `reviewRequests` (without flipping `reviewDecision` — see below),
+ * so the "fixes pushed, back in reviewer's court" case falls out of the
+ * `awaiting-review` rule for free — no special handling needed.
  */
 export function classify(
   pr: NormalizedPR,
@@ -69,10 +69,10 @@ export function classify(
     if (pr.reviewDecision === "APPROVED")
       return hit(Bucket.NEEDS_ME, Group.READY_TO_MERGE);
 
-    // A pending reviewer means the ball is in their court — this is the key
-    // correction to §2's assumption. GitHub does NOT flip `reviewDecision` away
-    // from CHANGES_REQUESTED when you push fixes and re-request review; it stays
-    // CHANGES_REQUESTED while the reviewer goes back into `reviewRequests`. So a
+    // A pending reviewer means the ball is in their court. GitHub does NOT flip
+    // `reviewDecision` away from CHANGES_REQUESTED when you push fixes and
+    // re-request review; it stays CHANGES_REQUESTED while the reviewer goes back
+    // into `reviewRequests`. So a
     // non-empty request list (whether an initial request or a re-request after
     // changes) means we're waiting on them, not the other way around.
     if (pr.reviewRequests.length > 0)

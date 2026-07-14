@@ -4,7 +4,29 @@
   "private": true,
   "description": "A \"whose move is it\" pull-request dashboard — a fully static, zero-service GitHub Pages app.",
   "license": "MIT",
+  "author": "WAVIISoft, LLC",
+  "homepage": "https://waviisoft.github.io/pr-triage/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/waviisoft/pr-triage.git"
+  },
+  "bugs": {
+    "url": "https://github.com/waviisoft/pr-triage/issues"
+  },
+  "keywords": [
+    "github",
+    "pull-requests",
+    "code-review",
+    "dashboard",
+    "triage",
+    "react",
+    "vite",
+    "github-pages"
+  ],
   "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

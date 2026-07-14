@@ -17,7 +17,7 @@ export const BUCKET_TITLE: Record<
   [Bucket.PICK_UP]: "Reviews to pick up",
 };
 
-/** Small uppercase sub-group labels (brief §8). */
+/** Small uppercase sub-group labels. */
 export const GROUP_LABEL: Record<GroupT, string> = {
   [Group.MERGE_CONFLICT]: "Merge conflicts",
   [Group.CI_FAILING]: "CI failing",
@@ -35,7 +35,7 @@ export const GROUP_LABEL: Record<GroupT, string> = {
 /**
  * Display order of groups within each bucket. A merge conflict blocks merge
  * regardless of approvals, so it outranks review state and sits at the top of
- * "Needs my attention" (brief §8).
+ * "Needs my attention".
  */
 const GROUP_ORDER: Record<
   Exclude<Bucket, typeof Bucket.EXCLUDED>,
