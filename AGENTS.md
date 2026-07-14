@@ -41,7 +41,7 @@ fixtures.
 ## Screenshots
 
 `public/` holds screenshots used by the README and the welcome/no-token page
-(`src/ui/TokenGate.tsx`):
+(`src/ui/WelcomePage.tsx`):
 
 - `demo-light.png` / `demo-dark.png` — the demo board (also embedded on the
   welcome page).

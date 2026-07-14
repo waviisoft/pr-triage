@@ -34,8 +34,8 @@ import { Bucket } from "./Bucket";
 import { IconLogo, IconPencil, IconRefresh, IconSettings } from "./icons";
 import { GITHUB_BASE } from "./links";
 import { Tile } from "./Tile";
-import { TokenGate } from "./TokenGate";
 import { TokenManager } from "./TokenManager";
+import { WelcomePage } from "./WelcomePage";
 
 const SCOPE_KEY = "pr-triage:scope";
 const THEME_KEY = "pr-triage:theme";
@@ -403,7 +403,7 @@ export function App() {
   }, [view]);
 
   if (!tokens.length && !demo) {
-    return <TokenGate onAdd={addToken} onDemo={() => enterDemo(setDemo)} />;
+    return <WelcomePage onAdd={addToken} onDemo={() => enterDemo(setDemo)} />;
   }
 
   // In demo mode the board reads as a scoped org view (so "Reviews to pick up"

@@ -13,7 +13,7 @@ const SHOT_ALT =
  * read-only token via a modal. `onDemo` flips the app into demo mode with no
  * token at all.
  */
-export function TokenGate({
+export function WelcomePage({
   onAdd,
   onDemo,
 }: {
