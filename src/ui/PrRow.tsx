@@ -47,15 +47,17 @@ export function PrRow({ item }: { item: ClassifiedPR }) {
           )}
           {reason}
         </span>
-        <span className="sep">·</span>
-        <span title={new Date(pr.updatedAt).toLocaleString()}>
-          {relativeTime(pr.updatedAt)}
+        <span className="meta-part">
+          <span className="sep">·</span>
+          <span title={new Date(pr.updatedAt).toLocaleString()}>
+            {relativeTime(pr.updatedAt)}
+          </span>
         </span>
         {pr.mergeable === "CONFLICTING" && group !== "merge-conflict" ? (
-          <>
+          <span className="meta-part">
             <span className="sep">·</span>
             <span style={{ color: "var(--rose)" }}>conflicts</span>
-          </>
+          </span>
         ) : null}
       </div>
 
