@@ -41,9 +41,7 @@ export function PrRow({ item }: { item: ClassifiedPR }) {
           <span className="sep">·</span>
           <span>
             {mine ? (
-              <>
-                <span className="you-tag">you</span>{" "}
-              </>
+              <span className="you-tag">you</span>
             ) : (
               `${pr.authorLogin} · `
             )}
