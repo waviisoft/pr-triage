@@ -4,6 +4,7 @@ const REPO_SLUG = "waviisoft/pr-triage";
 export const REPO_URL = `${GITHUB_BASE}/${REPO_SLUG}`;
 export const REPO_LICENSE_URL = `${REPO_URL}/blob/main/LICENSE`;
 export const NEW_PAT_URL = `${GITHUB_BASE}/settings/personal-access-tokens/new`;
+export const WAVIISOFT_URL = "https://www.waviisoft.com";
 
 /**
  * Only let http(s) URLs reach an `href`. PR links come from GitHub's API and are
