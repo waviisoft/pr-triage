@@ -329,6 +329,12 @@ export function App() {
           catalogs={catalogs}
           onAdd={addToken}
           onRemove={removeToken}
+          onPickRepo={(repo) => {
+            const s: Scope = { kind: "repo", value: repo };
+            setScope(s);
+            localStorage.setItem(SCOPE_KEY, JSON.stringify(s));
+            setShowManager(false);
+          }}
           onClose={() => setShowManager(false)}
         />
       ) : null}

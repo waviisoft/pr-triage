@@ -66,6 +66,8 @@ entirely. So to cover multiple owners, **add one read-only token per owner** fro
 **⚙ → Manage tokens**; the dashboard queries them all and **aggregates the
 results into one board**, deduped by PR URL. Each token is auto-labeled by the
 owner it reaches, and a failing token is flagged without blanking the rest.
+Expand a token in the manager to **see exactly which repos it grants** — click
+one to triage it.
 
 If an org requires it, an org owner must **approve** your fine-grained token
 (Org → Settings → Personal access tokens → Pending requests) before it can see
