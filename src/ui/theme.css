@@ -139,6 +139,36 @@ a {
   padding: 28px 20px 80px;
 }
 
+/* "View on GitHub" corner ribbon, fixed to the top-right of the viewport.
+   Hidden below a width where it would overlap the header controls. */
+.gh-sash {
+  position: fixed;
+  top: 24px;
+  right: -46px;
+  width: 160px;
+  transform: rotate(45deg);
+  background: #24292f;
+  color: #fff;
+  text-align: center;
+  padding: 5px 0;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+  z-index: 60;
+  transition: background 0.12s;
+}
+.gh-sash:hover {
+  background: #30363d;
+}
+/* Below this width the centered column reaches the corner and the ribbon would
+   overlap the header controls, so hide it there. */
+@media (max-width: 969px) {
+  .gh-sash {
+    display: none;
+  }
+}
+
 .header {
   display: flex;
   align-items: flex-start;
