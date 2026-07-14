@@ -19,10 +19,11 @@ export function TokenGate({
           <li>
             A <strong>fine-grained</strong> PAT is simplest and safest — grant
             <code>Pull requests: Read</code> and <code>Metadata: Read</code>.
-            For the CI pass/fail dots, also add <code>Checks: Read</code>{" "}
-            (GitHub Actions and most CI report as <em>check runs</em>) and{" "}
-            <code>Commit statuses: Read</code> (older integrations) — grant both, or
-            some PRs show a dot and others don’t. It’s scoped to <em>one</em>{" "}
+            For CI dots, add <code>Commit statuses: Read</code> — but note a
+            fine-grained PAT can’t read <em>check runs</em> (GitHub Actions and most
+            CI), since GitHub offers no Checks permission for these tokens, so those
+            PRs show no dot. For Actions status use a <strong>classic</strong> PAT
+            (scope <code>repo</code>) instead. It’s scoped to <em>one</em>{" "}
             owner (your account or one org).
           </li>
           <li>

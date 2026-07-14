@@ -214,11 +214,13 @@ async function graphql<D>(
 
   const body = (await res.json()) as GqlResponse<D>;
   // A read-only fine-grained token often lacks permission for a *field* we
-  // request — `statusCheckRollup` needs "Checks: Read", and `viewer.organizations`
-  // needs org permissions. GitHub reports those as field-level errors while still
-  // returning the rest of the data. Treat errors as fatal ONLY when no usable data
-  // came back (e.g. an org that forbids the token outright); otherwise use the
-  // partial data so a correctly-scoped token still works, just without CI dots.
+  // request — `statusCheckRollup`'s check-run half needs a Checks permission that
+  // GitHub no longer offers for fine-grained PATs (so Actions CI is unreadable
+  // without a classic PAT), and `viewer.organizations` needs org permissions.
+  // GitHub reports those as field-level errors while still returning the rest of
+  // the data. Treat errors as fatal ONLY when no usable data came back (e.g. an org
+  // that forbids the token outright); otherwise use the partial data so a
+  // correctly-scoped token still works, just without CI dots.
   if (body.data == null) {
     const messages = body.errors?.length
       ? [...new Set(body.errors.map((e) => e.message))]
