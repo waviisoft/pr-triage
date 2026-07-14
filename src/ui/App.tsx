@@ -32,7 +32,29 @@ const THEME_KEY = "pr-triage:theme";
 /** "system" follows the OS live (no override); the others pin a theme. */
 type Theme = "system" | "light" | "dark";
 
-function loadScope(): Scope {
+// Scope lives in the URL (`?scope=all|org:x|repo:owner/name`) so each browser
+// tab holds its own filter independently and can be bookmarked/shared. The last
+// choice is also mirrored to localStorage as the default for a fresh tab.
+function scopeToParam(scope: Scope): string {
+  return scope.kind === "all" ? "all" : `${scope.kind}:${scope.value}`;
+}
+
+function parseScopeParam(raw: string | null): Scope | null {
+  if (!raw) return null;
+  if (raw === "all") return { kind: "all" };
+  const i = raw.indexOf(":");
+  if (i < 0) return null;
+  const kind = raw.slice(0, i);
+  const value = raw.slice(i + 1);
+  if ((kind === "org" || kind === "repo") && value) return { kind, value };
+  return null;
+}
+
+function loadInitialScope(): Scope {
+  const fromUrl = parseScopeParam(
+    new URLSearchParams(window.location.search).get("scope"),
+  );
+  if (fromUrl) return fromUrl;
   try {
     const raw = localStorage.getItem(SCOPE_KEY);
     if (raw) return JSON.parse(raw) as Scope;
@@ -40,6 +62,17 @@ function loadScope(): Scope {
     /* ignore */
   }
   return { kind: "all" };
+}
+
+function persistScope(scope: Scope): void {
+  const url = new URL(window.location.href);
+  url.searchParams.set("scope", scopeToParam(scope));
+  window.history.replaceState(null, "", url);
+  try {
+    localStorage.setItem(SCOPE_KEY, JSON.stringify(scope));
+  } catch {
+    /* ignore */
+  }
 }
 
 function initialTheme(): Theme {
@@ -57,7 +90,7 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: string }[] = [
 
 export function App() {
   const [tokens, setTokens] = useState<TokenEntry[]>(getTokens);
-  const [scope, setScope] = useState<Scope>(loadScope());
+  const [scope, setScope] = useState<Scope>(loadInitialScope);
   const [viewer, setViewer] = useState<string | null>(null);
   const [view, setView] = useState<TriageView | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
@@ -189,6 +222,13 @@ export function App() {
     [tokens],
   );
 
+  // Apply a new scope: update state and persist to the URL (per-tab) +
+  // localStorage. The load effect re-runs off the new scope.
+  const changeScope = useCallback((s: Scope) => {
+    setScope(s);
+    persistScope(s);
+  }, []);
+
   // Scope picker + access hints draw from the union of every token's catalog
   // PLUS the repos seen in results. The catalog can't enumerate org repos when
   // the token lacks org-membership visibility, but those repos still show up in
@@ -264,10 +304,7 @@ export function App() {
           <ScopeSwitcher
             scope={scope}
             catalog={mergedCatalog}
-            onApply={(s) => {
-              setScope(s);
-              localStorage.setItem(SCOPE_KEY, JSON.stringify(s));
-            }}
+            onApply={changeScope}
           />
           <button
             className="btn btn-icon"
