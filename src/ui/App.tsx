@@ -406,13 +406,6 @@ export function App() {
             <Tile count={view.counts.openTotal} label="Open total" severity="slate" />
           </div>
 
-          {status === "loading" ? (
-            <div className="banner banner-info">
-              <span className="spin" />
-              Refreshing…
-            </div>
-          ) : null}
-
           {view.buckets.map((b) => (
             <Bucket
               key={b.bucket}
