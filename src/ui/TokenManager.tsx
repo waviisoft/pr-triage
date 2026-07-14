@@ -98,7 +98,9 @@ export function TokenManager({
                                 }
                               >
                                 {repoCount} repo{repoCount === 1 ? "" : "s"}{" "}
-                                {open ? "▾" : "▸"}
+                                <span className="caret" aria-hidden>
+                                  {open ? "▾" : "▸"}
+                                </span>
                               </button>
                             </>
                           ) : (

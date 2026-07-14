@@ -15,6 +15,7 @@ vi.mock("../github/client", () => ({
   fetchTriageForTokens: vi.fn(async () => ({ prs: [], errors: [] })),
   fetchCatalog: vi.fn(async () => ({ login: "me", orgs: [], repos: [] })),
   tokensForScope: (_scope: unknown, tokens: unknown) => tokens,
+  scopeTargets: () => [],
   hasPendingMergeable: () => false,
 }));
 

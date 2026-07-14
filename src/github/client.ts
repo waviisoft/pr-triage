@@ -63,37 +63,67 @@ export function makeToken(label: string, token: string): TokenEntry {
 // Scope + search-string construction.
 // ---------------------------------------------------------------------------
 
-export type Scope =
-  | { kind: "all" }
+/** A single concrete thing to triage: one org, or one owner/name repo. */
+export type ScopeTarget =
   | { kind: "org"; value: string }
   | { kind: "repo"; value: string };
 
-/** The org/repo qualifier for a scope; empty for "everything accessible to me". */
-function scopeQualifier(scope: Scope): string {
-  if (scope.kind === "org") return `org:${scope.value}`;
-  if (scope.kind === "repo") return `repo:${scope.value}`;
-  return "";
+// A scope is either "everything accessible to you" or an explicit set of
+// org/repo targets. The single-target `org`/`repo` kinds are kept as their own
+// shapes (they're the common case, and they give the scope line a clean label
+// and a direct GitHub link); `multi` carries two or more targets so the board
+// can watch several repos and orgs at once.
+export type Scope =
+  | { kind: "all" }
+  | { kind: "org"; value: string }
+  | { kind: "repo"; value: string }
+  | { kind: "multi"; targets: ScopeTarget[] };
+
+/** Flatten any scope to its list of concrete targets ([] means "everything"). */
+export function scopeTargets(scope: Scope): ScopeTarget[] {
+  if (scope.kind === "all") return [];
+  if (scope.kind === "multi") return scope.targets;
+  return [{ kind: scope.kind, value: scope.value }];
 }
 
-/** Query A: the three "involved" searches (`involves` omits review roles). */
-function involvedSearches(scope: Scope): string[] {
-  const s = scopeQualifier(scope);
+/** The GitHub search qualifier for one target (e.g. `org:acme`, `repo:o/n`). */
+function targetQualifier(t: ScopeTarget): string {
+  return `${t.kind}:${t.value}`;
+}
+
+/** The three "involved" searches for one qualifier (`involves` omits review roles). */
+function involvedSearches(qualifier: string): string[] {
   return [
-    `is:pr is:open involves:@me ${s}`,
-    `is:pr is:open review-requested:@me ${s}`,
-    `is:pr is:open reviewed-by:@me ${s}`,
+    `is:pr is:open involves:@me ${qualifier}`,
+    `is:pr is:open review-requested:@me ${qualifier}`,
+    `is:pr is:open reviewed-by:@me ${qualifier}`,
   ].map((q) => q.trim());
 }
 
 /**
- * Query B: non-draft, no-review PRs; `reviewRequests` is filtered in code.
- * Returns `null` for the "all" scope — an unscoped `review:none` search would
- * sweep all of GitHub, which is neither useful nor bounded, so "reviews to pick
- * up" is only offered within an org or repo.
+ * Every search string to run for a scope. Each target contributes its three
+ * "involved" searches plus one "unclaimed" (`review:none`) search; the results
+ * are deduped by URL upstream, so targets that overlap can't double-count a PR.
+ *
+ * "Everything" (no targets) runs only the involved searches — an unscoped
+ * `review:none` would sweep all of GitHub, which is neither useful nor bounded,
+ * so "reviews to pick up" is only offered within an org or repo.
+ *
+ * Targets are searched independently rather than folded into one query with
+ * several `org:`/`repo:` qualifiers: independent searches reuse the exact,
+ * well-tested single-scope query shape and sidestep GitHub's limits on how many
+ * qualifiers one search may carry.
  */
-function unclaimedSearch(scope: Scope): string | null {
-  if (scope.kind === "all") return null;
-  return `is:pr is:open draft:false review:none ${scopeQualifier(scope)}`;
+function searchesForScope(scope: Scope): string[] {
+  const targets = scopeTargets(scope);
+  if (!targets.length) return involvedSearches("");
+  const out: string[] = [];
+  for (const t of targets) {
+    const q = targetQualifier(t);
+    out.push(...involvedSearches(q));
+    out.push(`is:pr is:open draft:false review:none ${q}`);
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -276,19 +306,17 @@ async function runSearch(
 }
 
 /**
- * Fetch the full deduped union of query A (three involved searches) and query B
- * (unclaimed). Dedupe by `url`, since a PR can surface in several searches.
+ * Fetch the full deduped union of every search a scope implies (the involved
+ * searches, plus the unclaimed search per target). Dedupe by `url`, since a PR
+ * can surface in several searches — and, for multi-target scopes, in several
+ * targets.
  */
 async function fetchTriagePRs(
   token: string,
   scope: Scope,
   viewerLogin: string,
 ): Promise<NormalizedPR[]> {
-  const unclaimed = unclaimedSearch(scope);
-  const searches = [
-    ...involvedSearches(scope),
-    ...(unclaimed ? [unclaimed] : []),
-  ];
+  const searches = searchesForScope(scope);
   const results = await Promise.all(
     searches.map((q) => runSearch(token, q, viewerLogin)),
   );
@@ -347,28 +375,33 @@ export async function resolveLogin(tokens: TokenEntry[]): Promise<string> {
   throw new GitHubError("None of your saved tokens could reach GitHub.");
 }
 
+/** Whether a token's catalog demonstrably reaches a single target's owner. */
+function catalogReaches(c: Catalog, t: ScopeTarget): boolean {
+  const owner = t.kind === "org" ? t.value : t.value.split("/")[0];
+  if (c.orgs.includes(owner)) return true;
+  return c.repos.some((r) => r === t.value || r.startsWith(`${owner}/`));
+}
+
 /**
- * Which tokens to query for a scope. When catalogs are known, route an org/repo
- * scope only to the tokens that can see that owner; otherwise (or if none match)
- * fall back to trying every token. "Everything" always uses all tokens.
+ * Which tokens to query for a scope. When catalogs are known, route to the
+ * tokens that can see at least one of the scope's targets; otherwise (or if none
+ * match) fall back to trying every token. "Everything" always uses all tokens.
  */
 export function tokensForScope(
   scope: Scope,
   tokens: TokenEntry[],
   catalogs: Record<string, Catalog>,
 ): TokenEntry[] {
-  if (scope.kind === "all") return tokens;
-  const owner =
-    scope.kind === "org" ? scope.value : scope.value.split("/")[0];
-  // Match on what a token demonstrably reaches — the owner appearing among its
+  const targets = scopeTargets(scope);
+  if (!targets.length) return tokens;
+  // Match on what a token demonstrably reaches — an owner appearing among its
   // orgs or repos. We deliberately don't match on `catalog.login`: every one of
   // a user's tokens shares that login, so it would select all of them. When
   // nothing matches (or catalogs haven't loaded), fall back to trying them all.
   const matched = tokens.filter((t) => {
     const c = catalogs[t.id];
     if (!c) return false;
-    if (c.orgs.includes(owner)) return true;
-    return c.repos.some((r) => r === scope.value || r.startsWith(`${owner}/`));
+    return targets.some((tg) => catalogReaches(c, tg));
   });
   return matched.length ? matched : tokens;
 }
