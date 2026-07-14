@@ -155,6 +155,7 @@ a {
 }
 
 .header .scope-line {
+  position: relative;
   color: var(--text-dim);
   font-size: 13px;
 }
@@ -162,6 +163,85 @@ a {
 .header .viewer {
   font-family: var(--font-mono);
   color: var(--accent);
+}
+.header .viewer:hover {
+  text-decoration: underline;
+}
+
+/* scope label links to GitHub; a separate pencil button opens the picker */
+.scope-link {
+  color: var(--text);
+  font-size: 13px;
+  border-bottom: 1px solid transparent;
+}
+.scope-link:hover {
+  color: var(--accent);
+  border-bottom-color: currentColor;
+}
+.scope-change {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: -3px;
+  width: 22px;
+  height: 22px;
+  margin: 0 2px 0 5px;
+  padding: 0;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.scope-change:hover {
+  color: var(--accent);
+  background: var(--surface-2);
+}
+
+.scope-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
+  min-width: 280px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  padding: 12px;
+}
+.scope-pop .field {
+  width: 100%;
+}
+.scope-kinds {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.chip-btn {
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 13px;
+  cursor: pointer;
+}
+.chip-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.chip-btn[data-active="true"] {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  font-weight: 600;
+}
+.scope-hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin-top: 8px;
 }
 
 .header-actions {
