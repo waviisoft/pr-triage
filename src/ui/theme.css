@@ -910,7 +910,10 @@ a {
   color: var(--accent);
   border: 1px solid currentColor;
   border-radius: 5px;
-  padding: 2px 5px;
+  /* Uppercase glyphs sit on the baseline and leave the font's descender space
+     empty below them, so equal padding makes the caps ride high. Give the top
+     ~1px more than the bottom to optically center the ink in the pill. */
+  padding: 3px 5px 2px;
   margin-right: 7px;
   font-size: 10.5px;
   font-weight: 650;
