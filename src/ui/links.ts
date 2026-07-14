@@ -38,3 +38,20 @@ export function newBugReportUrl(userAgent: string): string {
   });
   return `${REPO_URL}/issues/new?${params.toString()}`;
 }
+
+/**
+ * Deep link to the feedback issue form with fields pre-filled. Mirrors
+ * {@link newBugReportUrl}: GitHub seeds a field from a query param named after
+ * that field's `id` in `.github/ISSUE_TEMPLATE/feedback.yml`. We fill
+ * `environment` (the "Browser & OS" field) with the reporter's user-agent
+ * string. The `sentiment` and `frequency` dropdowns are left for the reporter
+ * to pick (GitHub issue forms can't pre-fill `dropdown` fields via query
+ * params). No token is included.
+ */
+export function newFeedbackUrl(userAgent: string): string {
+  const params = new URLSearchParams({
+    template: "feedback.yml",
+    environment: userAgent,
+  });
+  return `${REPO_URL}/issues/new?${params.toString()}`;
+}

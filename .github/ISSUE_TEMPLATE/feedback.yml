@@ -1,0 +1,65 @@
+name: Feedback
+description: Share your experience, impressions, or general suggestions
+labels: [feedback]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to share feedback! **This issue will be
+        public**, so please keep confidential information out of it. In
+        particular, avoid sharing:
+
+        - Your **GitHub token** or any other secret or credential.
+        - **Private org or repository names.**
+        - **Pull request titles, descriptions, or branch names** — these often
+          carry product code names, customer names, or other internal details.
+        - **Colleagues' usernames or `@mentions`** (they get pinged, and it can
+          reveal who's involved).
+        - **Screenshots that show your PR list or other browser tabs** — crop or
+          redact them first.
+
+        This form is for general feedback and impressions. If something is
+        broken, please file a **Bug report** instead; if you have a concrete
+        idea for a new capability, use the **Feature request** form.
+  - type: dropdown
+    id: sentiment
+    attributes:
+      label: Overall impression
+      description: How has your experience been so far?
+      options:
+        - Love it
+        - Mostly good, some rough edges
+        - Mixed
+        - Frustrating
+        - Just getting started / no strong opinion yet
+    validations:
+      required: true
+  - type: textarea
+    id: what-works
+    attributes:
+      label: What's working well?
+      description: Which parts of the dashboard are useful or feel good to use?
+  - type: textarea
+    id: what-could-be-better
+    attributes:
+      label: What could be better?
+      description: >-
+        Anything confusing, awkward, or missing? Describe it in general terms
+        wherever a real name isn't needed to make the point.
+    validations:
+      required: true
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often do you use it?
+      options:
+        - Multiple times a day
+        - Daily
+        - A few times a week
+        - Occasionally
+        - Just tried it once
+  - type: input
+    id: environment
+    attributes:
+      label: Browser & OS
+      placeholder: e.g. Chrome 126 on macOS 15
