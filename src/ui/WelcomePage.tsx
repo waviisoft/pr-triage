@@ -114,13 +114,13 @@ function AddTokenModal({
   }, [onClose]);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onMouseDown={onClose}>
       <div
         className="modal"
         role="dialog"
         aria-label="Add a token"
         aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="modal-head">
           <h2>Add a token</h2>
