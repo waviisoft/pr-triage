@@ -35,30 +35,30 @@ export function PrRow({ item }: { item: ClassifiedPR }) {
     >
       <span className="row-num">#{pr.number}</span>
 
-      <div className="row-body">
-        <div className="row-title">{pr.title}</div>
-        <div className="row-meta">
-          <span className="repo">{pr.repository}</span>
-          <span className="sep">·</span>
-          <span>
-            {mine ? (
-              <span className="you-tag">you</span>
-            ) : (
-              `${pr.authorLogin} · `
-            )}
-            {reason}
-          </span>
+      <div className="row-title">{pr.title}</div>
+      <div className="row-meta">
+        <span className="repo">{pr.repository}</span>
+        <span className="sep">·</span>
+        <span>
+          {mine ? (
+            <span className="you-tag">you</span>
+          ) : (
+            `${pr.authorLogin} · `
+          )}
+          {reason}
+        </span>
+        <span className="meta-part">
           <span className="sep">·</span>
           <span title={new Date(pr.updatedAt).toLocaleString()}>
             {relativeTime(pr.updatedAt)}
           </span>
-          {pr.mergeable === "CONFLICTING" && group !== "merge-conflict" ? (
-            <>
-              <span className="sep">·</span>
-              <span style={{ color: "var(--rose)" }}>conflicts</span>
-            </>
-          ) : null}
-        </div>
+        </span>
+        {pr.mergeable === "CONFLICTING" && group !== "merge-conflict" ? (
+          <span className="meta-part">
+            <span className="sep">·</span>
+            <span style={{ color: "var(--rose)" }}>conflicts</span>
+          </span>
+        ) : null}
       </div>
 
       <div className="row-right">
