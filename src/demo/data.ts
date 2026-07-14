@@ -1,8 +1,8 @@
-// Demo mode — a self-contained sample board so the app can be shown off (and
-// screenshotted) without a token or any network. The data is a set of
+// Demo mode — the sample dataset behind the board when the demo is on. A set of
 // hand-authored `NormalizedPR`s chosen to exercise every triage group, run
-// through the exact same `classify`/`buildView` pipeline as real data. It never
-// touches `github/` beyond the shared `Scope` type.
+// through the exact same `classify`/`buildView` pipeline as real data. This
+// module is pure data: how the demo is *activated* (the `?demo` flag) lives in
+// `useDemoMode`. It never touches `github/` beyond the shared `Scope` type.
 
 import type { Scope } from "../github/client";
 import type { NormalizedPR } from "../triage/types";
@@ -16,23 +16,6 @@ export const DEMO_VIEWER = "you";
  * GitHub), so a scoped demo is what populates that third bucket.
  */
 export const DEMO_SCOPE: Scope = { kind: "org", value: "acme" };
-
-/** Query-string flag that turns the board into the sample view. */
-const DEMO_PARAM = "demo";
-
-/** Is the demo requested by the current URL (`?demo`)? */
-export function demoRequested(search: string = window.location.search): boolean {
-  const v = new URLSearchParams(search).get(DEMO_PARAM);
-  return v !== null && v !== "0" && v !== "false";
-}
-
-/** Add or remove `?demo` from the address bar without reloading the page. */
-export function setDemoParam(on: boolean): void {
-  const url = new URL(window.location.href);
-  if (on) url.searchParams.set(DEMO_PARAM, "1");
-  else url.searchParams.delete(DEMO_PARAM);
-  window.history.replaceState(null, "", url);
-}
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;

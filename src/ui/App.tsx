@@ -23,13 +23,8 @@ import {
   type TokenEntry,
   type TokenError,
 } from "../github/client";
-import {
-  DEMO_SCOPE,
-  DEMO_VIEWER,
-  demoPRs,
-  demoRequested,
-  setDemoParam,
-} from "../demo/data";
+import { DEMO_SCOPE, DEMO_VIEWER, demoPRs } from "../demo/data";
+import { useDemoMode } from "../demo/useDemoMode";
 import { Bucket } from "./Bucket";
 import { IconLogo, IconPencil, IconRefresh, IconSettings } from "./icons";
 import { GITHUB_BASE } from "./links";
@@ -134,20 +129,10 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: string }[] = [
   { value: "dark", label: "Dark", icon: "☾" },
 ];
 
-/** Turn the sample board on/off, keeping the `?demo` URL flag in sync. */
-function enterDemo(setDemo: (on: boolean) => void): void {
-  setDemoParam(true);
-  setDemo(true);
-}
-function exitDemo(setDemo: (on: boolean) => void): void {
-  setDemoParam(false);
-  setDemo(false);
-}
-
 export function App() {
   // Demo mode (`?demo`) shows a sample board built from local fixtures — no
   // token, no network — so the app can be tried and screenshotted instantly.
-  const [demo, setDemo] = useState(demoRequested);
+  const { demo, enterDemo, exitDemo } = useDemoMode();
   const [tokens, setTokens] = useState<TokenEntry[]>(getTokens);
   const [scope, setScope] = useState<Scope>(loadInitialScope);
   const [scopePickerOpen, setScopePickerOpen] = useState(false);
@@ -403,7 +388,7 @@ export function App() {
   }, [view]);
 
   if (!tokens.length && !demo) {
-    return <WelcomePage onAdd={addToken} onDemo={() => enterDemo(setDemo)} />;
+    return <WelcomePage onAdd={addToken} onDemo={enterDemo} />;
   }
 
   // In demo mode the board reads as a scoped org view (so "Reviews to pick up"
@@ -520,7 +505,7 @@ export function App() {
             <strong>Demo mode</strong> — sample data, no token or network. This is
             what the board looks like once you connect a token.
           </span>
-          <button className="btn" onClick={() => exitDemo(setDemo)}>
+          <button className="btn" onClick={exitDemo}>
             Exit demo
           </button>
         </div>

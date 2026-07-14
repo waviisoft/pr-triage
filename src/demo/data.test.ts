@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildView } from "../triage/group";
 import { Group, type Group as GroupT } from "../triage/types";
-import { DEMO_VIEWER, demoPRs, demoRequested } from "./data";
+import { DEMO_VIEWER, demoPRs } from "./data";
 
 /** Collect every (non-null) group that appears anywhere in the built view. */
 function groupsInView(prs = demoPRs()): Set<GroupT> {
@@ -40,16 +40,5 @@ describe("demo data", () => {
     for (const p of demoPRs(now)) {
       expect(new Date(p.updatedAt).getTime()).toBeLessThanOrEqual(now);
     }
-  });
-});
-
-describe("demoRequested", () => {
-  it("reads the ?demo flag from a query string", () => {
-    expect(demoRequested("?demo")).toBe(true);
-    expect(demoRequested("?demo=1")).toBe(true);
-    expect(demoRequested("?foo=bar&demo=1")).toBe(true);
-    expect(demoRequested("")).toBe(false);
-    expect(demoRequested("?demo=0")).toBe(false);
-    expect(demoRequested("?demo=false")).toBe(false);
   });
 });
