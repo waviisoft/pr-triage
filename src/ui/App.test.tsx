@@ -50,6 +50,29 @@ describe("App — token management", () => {
     );
     expect(saveTokens).toHaveBeenCalled();
   });
+
+  it("renames a token from the manager and persists the new label", async () => {
+    render(<App />);
+    await screen.findByText("Needs my attention");
+
+    fireEvent.click(screen.getByRole("button", { name: /settings/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /manage tokens/i }));
+    await screen.findByRole("dialog", { name: /manage tokens/i });
+
+    // Enter edit mode, type a new name, and commit with Enter.
+    fireEvent.click(screen.getByRole("button", { name: /rename me/i }));
+    const input = screen.getByRole("textbox", { name: /rename me/i });
+    fireEvent.change(input, { target: { value: "work laptop" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() =>
+      expect(saveTokens).toHaveBeenCalledWith([
+        expect.objectContaining({ id: "1", label: "work laptop" }),
+      ]),
+    );
+    // The new label is shown; the editor is gone.
+    expect(screen.getByText("work laptop")).toBeTruthy();
+  });
 });
 
 describe("RefreshButton — stale note", () => {

@@ -284,6 +284,22 @@ export function App() {
     [tokens, load],
   );
 
+  // Relabel a token. Only the display label changes — the credential and its
+  // catalog are untouched — so we persist and move on without re-querying. An
+  // empty/whitespace name is rejected (the old label stands).
+  const renameToken = useCallback(
+    (id: string, label: string) => {
+      const trimmed = label.trim();
+      if (!trimmed) return;
+      const next = tokens.map((t) =>
+        t.id === id ? { ...t, label: trimmed } : t,
+      );
+      setTokens(next);
+      saveTokens(next);
+    },
+    [tokens],
+  );
+
   const removeToken = useCallback(
     (id: string) => {
       const next = tokens.filter((t) => t.id !== id);
@@ -515,6 +531,7 @@ export function App() {
           refreshing={refreshing}
           onAdd={addToken}
           onRemove={removeToken}
+          onRename={renameToken}
           onRefresh={refreshToken}
           onPickRepo={(repo) => {
             changeScope({ kind: "repo", value: repo });

@@ -5,7 +5,7 @@ import {
   type TokenEntry,
 } from "../github/client";
 import { AddTokenForm } from "./AddTokenForm";
-import { IconClose, IconRefresh } from "./icons";
+import { IconClose, IconPencil, IconRefresh } from "./icons";
 
 function mask(token: string): string {
   return token.length > 8 ? `••••${token.slice(-4)}` : "••••";
@@ -25,6 +25,7 @@ export function TokenManager({
   refreshing,
   onAdd,
   onRemove,
+  onRename,
   onRefresh,
   onPickRepo,
   onClose,
@@ -35,6 +36,8 @@ export function TokenManager({
   refreshing: string[];
   onAdd: (label: string, token: string) => Promise<void>;
   onRemove: (id: string) => void;
+  /** Rename a token (its display label only — the credential is untouched). */
+  onRename: (id: string, label: string) => void;
   /** Re-fetch a token's catalog to pick up access it gained since it was added. */
   onRefresh: (id: string) => void;
   /** Jump the dashboard to a specific repo picked from a token's list. */
@@ -42,6 +45,24 @@ export function TokenManager({
   onClose: () => void;
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
+  // The token currently being relabeled, and the in-progress draft name.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+
+  const startRename = (t: TokenEntry) => {
+    setEditingId(t.id);
+    setDraft(t.label);
+  };
+  const cancelRename = () => {
+    setEditingId(null);
+    setDraft("");
+  };
+  const commitRename = (t: TokenEntry) => {
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== t.label) onRename(t.id, trimmed);
+    setEditingId(null);
+    setDraft("");
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -87,7 +108,37 @@ export function TokenManager({
               <li key={t.id} className="token-entry">
                 <div className="token-item">
                   <div className="token-meta">
-                    <span className="token-label">{t.label}</span>
+                    {editingId === t.id ? (
+                      <input
+                        className="field token-label-edit"
+                        value={draft}
+                        autoFocus
+                        aria-label={`Rename ${t.label}`}
+                        onChange={(e) => setDraft(e.target.value)}
+                        onBlur={() => commitRename(t)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            commitRename(t);
+                          } else if (e.key === "Escape") {
+                            e.preventDefault();
+                            cancelRename();
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span className="token-label-row">
+                        <span className="token-label">{t.label}</span>
+                        <button
+                          className="btn btn-ghost btn-icon token-rename"
+                          onClick={() => startRename(t)}
+                          aria-label={`Rename ${t.label}`}
+                          title="Rename"
+                        >
+                          <IconPencil size={13} />
+                        </button>
+                      </span>
+                    )}
                     <span className="token-reach">
                       {isRefreshing ? (
                         "refreshing access…"

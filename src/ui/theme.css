@@ -589,9 +589,37 @@ a {
   flex: 1;
 }
 .token-label {
-  display: block;
   font-weight: 600;
   font-size: 13.5px;
+}
+/* Label + rename pencil on one line; the pencil stays quiet until row hover. */
+.token-label-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.token-rename {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  color: var(--text-faint);
+  opacity: 0;
+}
+.token-item:hover .token-rename,
+.token-rename:focus-visible {
+  opacity: 1;
+}
+.token-rename:hover {
+  color: var(--accent);
+  border-color: var(--border);
+}
+/* Inline rename field, sized to sit in place of the label without reflowing. */
+.token-label-edit {
+  width: auto;
+  max-width: 220px;
+  font-weight: 600;
+  font-size: 13.5px;
+  padding: 3px 7px;
 }
 .token-reach {
   display: block;
