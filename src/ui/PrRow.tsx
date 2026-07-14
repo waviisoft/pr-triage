@@ -1,4 +1,5 @@
 import type { ClassifiedPR } from "../triage/types";
+import { safeHref } from "./links";
 import { CHIP_LABEL, SEVERITY } from "./severity";
 
 /** Compact "3d ago" style relative time from an ISO string. */
@@ -28,7 +29,7 @@ export function PrRow({ item }: { item: ClassifiedPR }) {
     <a
       className="row"
       data-severity={severity}
-      href={pr.url}
+      href={safeHref(pr.url)}
       target="_blank"
       rel="noreferrer"
     >
