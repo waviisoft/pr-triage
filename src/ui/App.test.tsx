@@ -40,14 +40,19 @@ describe("App — token management", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: /manage tokens/i }));
     await screen.findByRole("dialog", { name: /manage tokens/i });
 
-    // Remove the only token → back to the gate.
+    // Remove the only token → back to the welcome page.
     fireEvent.click(screen.getByRole("button", { name: /remove me/i }));
 
-    const field = await screen.findByLabelText(/GitHub token/i);
-    expect(field).toBeTruthy();
+    // The welcome page is shown (demo entry point present) and the dashboard's
+    // Refresh control is gone. (The welcome page previews the bucket names, so
+    // their text alone no longer tells the two screens apart.)
+    await screen.findByRole("button", { name: /view live demo/i });
     await waitFor(() =>
-      expect(screen.queryByText("Needs my attention")).toBeNull(),
+      expect(screen.queryByRole("button", { name: /refresh/i })).toBeNull(),
     );
+    // Token entry now lives behind the "Add a token" button (a modal).
+    fireEvent.click(screen.getByRole("button", { name: /add a token/i }));
+    expect(await screen.findByLabelText(/GitHub token/i)).toBeTruthy();
     expect(saveTokens).toHaveBeenCalled();
   });
 
