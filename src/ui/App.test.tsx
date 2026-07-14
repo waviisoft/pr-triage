@@ -2,16 +2,19 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-// Mock the GitHub layer so <App/> mounts straight into the dashboard with no
-// network. `getToken` returning a value makes App skip the gate on first render.
-const { forgetToken } = vi.hoisted(() => ({ forgetToken: vi.fn() }));
+// Mock the GitHub layer so <App/> mounts straight into the dashboard with one
+// saved token and no network.
+const { saveTokens } = vi.hoisted(() => ({ saveTokens: vi.fn() }));
 vi.mock("../github/client", () => ({
-  getToken: () => "seed-token",
-  setToken: vi.fn(),
-  forgetToken,
-  fetchViewerLogin: vi.fn(async () => "me"),
-  fetchTriagePRs: vi.fn(async () => []),
+  getTokens: () => [{ id: "1", label: "me", token: "tok" }],
+  saveTokens,
+  makeToken: (label: string, token: string) => ({ id: "new", label, token }),
+  suggestLabel: () => "auto",
+  ownersOf: () => [],
+  resolveLogin: vi.fn(async () => "me"),
+  fetchTriageForTokens: vi.fn(async () => ({ prs: [], errors: [] })),
   fetchCatalog: vi.fn(async () => ({ login: "me", orgs: [], repos: [] })),
+  tokensForScope: (_scope: unknown, tokens: unknown) => tokens,
   hasPendingMergeable: () => false,
 }));
 
@@ -22,27 +25,27 @@ afterEach(() => {
   localStorage.clear();
 });
 
-describe("App — forget token", () => {
-  it("returns to the token entry screen and clears the token", async () => {
+describe("App — token management", () => {
+  it("removing the only token returns to the token-entry screen", async () => {
     render(<App />);
 
-    // Dashboard has loaded (viewer resolved, buckets rendered).
+    // Dashboard has loaded and there's no token field while signed in.
     await screen.findByText("Needs my attention");
-    // The token-entry field is NOT present while signed in.
-    expect(screen.queryByLabelText(/fine-grained token/i)).toBeNull();
+    expect(screen.queryByLabelText(/GitHub token/i)).toBeNull();
 
-    // Open the settings menu and click "Forget token".
+    // Open the settings menu and the token manager.
     fireEvent.click(screen.getByRole("button", { name: /settings/i }));
-    fireEvent.click(screen.getByRole("menuitem", { name: /forget token/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /manage tokens/i }));
+    await screen.findByRole("dialog", { name: /manage tokens/i });
 
-    // We're back on the token-entry screen...
-    const field = await screen.findByLabelText(/fine-grained token/i);
+    // Remove the only token → back to the gate.
+    fireEvent.click(screen.getByRole("button", { name: /remove me/i }));
+
+    const field = await screen.findByLabelText(/GitHub token/i);
     expect(field).toBeTruthy();
-    // ...the dashboard is gone...
     await waitFor(() =>
       expect(screen.queryByText("Needs my attention")).toBeNull(),
     );
-    // ...and the stored token was cleared.
-    expect(forgetToken).toHaveBeenCalledTimes(1);
+    expect(saveTokens).toHaveBeenCalled();
   });
 });

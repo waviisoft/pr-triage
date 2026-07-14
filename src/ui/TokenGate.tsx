@@ -1,63 +1,36 @@
-import { useState } from "react";
+import { AddTokenForm } from "./AddTokenForm";
 
-const PAT_URL = "https://github.com/settings/personal-access-tokens/new";
-
-export function TokenGate({ onSave }: { onSave: (token: string) => void }) {
-  const [value, setValue] = useState("");
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const t = value.trim();
-    if (t) onSave(t);
-  };
-
+export function TokenGate({
+  onAdd,
+}: {
+  onAdd: (label: string, token: string) => Promise<void>;
+}) {
   return (
     <div className="gate">
       <div className="card">
         <h1>PR Triage</h1>
         <p>
-          A “whose move is it?” dashboard for your open pull requests. Paste a
+          A “whose move is it?” dashboard for your open pull requests. Add a
           read-only GitHub token to begin — everything runs in your browser and
-          the token never leaves it.
+          tokens never leave it.
         </p>
-        <form onSubmit={submit}>
-          <label htmlFor="token">GitHub fine-grained token</label>
-          <input
-            id="token"
-            className="field"
-            type="password"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="github_pat_…"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-          />
-          <div className="actions">
-            <button className="btn btn-primary" type="submit">
-              Save token
-            </button>
-            <a
-              className="btn"
-              href={PAT_URL}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Create a token ↗
-            </a>
-          </div>
-        </form>
+        <AddTokenForm onAdd={onAdd} submitLabel="Save token" showCreateLink />
         <ul>
           <li>
-            Create a <strong>fine-grained</strong> PAT scoped to the org or
-            repos you want to triage.
+            A <strong>fine-grained</strong> PAT is simplest and safest — grant
+            only <code>Pull requests: Read</code> and <code>Metadata: Read</code>
+            . It’s scoped to <em>one</em> owner (your account or one org).
           </li>
           <li>
-            Grant only <code>Pull requests: Read</code> and{" "}
-            <code>Metadata: Read</code>.
+            To span several accounts/orgs, add <strong>one token per owner</strong>
+            {" "}
+            later from the ⚙ menu — the dashboard aggregates them all. (Some orgs
+            block classic PATs, so a fine-grained token per owner is the reliable
+            path.)
           </li>
           <li>
-            It’s stored in <code>localStorage</code> and sent only to{" "}
-            <code>api.github.com</code>. Use “Forget token” anytime.
+            Tokens are stored in <code>localStorage</code>, sent only to{" "}
+            <code>api.github.com</code>, and never logged.
           </li>
         </ul>
       </div>

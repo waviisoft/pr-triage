@@ -46,26 +46,45 @@ as a pure, exhaustively-tested function.
 
 1. Create a **fine-grained personal access token**:
    <https://github.com/settings/personal-access-tokens/new>
-2. Scope it to the **org or repositories** you want to triage (or all your repos).
+2. Set the **Resource owner** to the account or org whose PRs you want to triage,
+   and select the repositories (or all of them).
 3. Grant only these read permissions — nothing more:
    - **Pull requests: Read**
    - **Metadata: Read** (required by GitHub for any repo access)
-4. Open the app and paste the token. That's it.
+4. Open the app and paste the token. The app checks it, auto-labels it by the
+   owner it can reach, and you're in.
 
-**Your token stays in your browser.** It's kept in `localStorage`, sent only to
-`api.github.com`, and never logged. Use **"Forget token"** in the header to clear
-it at any time.
+**Your tokens stay in your browser.** They're kept in `localStorage`, sent only
+to `api.github.com`, and never logged. Manage or remove them anytime from the
+**⚙ → Manage tokens** menu.
+
+### Triaging across several accounts or orgs
+
+A **fine-grained PAT is scoped to a single resource owner** — one token can't
+span your personal account *and* an org, and some orgs disable classic PATs
+entirely. So to cover multiple owners, **add one read-only token per owner** from
+**⚙ → Manage tokens**; the dashboard queries them all and **aggregates the
+results into one board**, deduped by PR URL. Each token is auto-labeled by the
+owner it reaches, and a failing token is flagged without blanking the rest.
+Expand a token in the manager to **see exactly which repos it grants** — click
+one to triage it.
+
+If an org requires it, an org owner must **approve** your fine-grained token
+(Org → Settings → Personal access tokens → Pending requests) before it can see
+that org's repos.
 
 ## Scope
 
 Use the header switcher to point the dashboard at:
 
-- **everything** accessible to you (all repos you're involved in),
+- **everything** accessible to you (across all your tokens),
 - a specific **org** (e.g. `waviisoft`), or
 - a single **repo** (e.g. `waviisoft/pr-triage`).
 
-Your choice is remembered across refreshes. Theme (system / light / dark) is too —
-"system" follows your OS setting live.
+Org and repo fields offer a **picklist of what your tokens can reach**. If a
+scoped view is empty and the target isn't reachable by any token, the app says
+so. Your choice is remembered across refreshes, as is the theme (system / light /
+dark) — "system" follows your OS setting live.
 
 ## Local development
 

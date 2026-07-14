@@ -3,27 +3,56 @@ import { mapPR, type RawPR } from "./map";
 import { CATALOG_QUERY, INVOLVED_QUERY } from "./queries";
 
 const GRAPHQL_ENDPOINT = "https://api.github.com/graphql";
-const TOKEN_KEY = "pr-triage:token";
+const TOKENS_KEY = "pr-triage:tokens";
+const LEGACY_TOKEN_KEY = "pr-triage:token";
 const MAX_PAGES = 10; // safety cap: up to 500 PRs per search
 
 // ---------------------------------------------------------------------------
-// Token handling — browser-only, localStorage. Never logged (brief §5).
+// Token handling — browser-only, localStorage. Never logged.
+//
+// Multiple labeled tokens are supported so the app can aggregate across GitHub
+// accounts/orgs a single token can't span: a fine-grained PAT is locked to one
+// resource owner, and some orgs forbid classic PATs entirely. One read-only
+// token per owner, results merged, sidesteps both limits.
 // ---------------------------------------------------------------------------
 
-export function getToken(): string | null {
+export interface TokenEntry {
+  id: string;
+  label: string;
+  token: string;
+}
+
+function newId(): string {
+  return crypto.randomUUID();
+}
+
+export function getTokens(): TokenEntry[] {
   try {
-    return localStorage.getItem(TOKEN_KEY);
+    const raw = localStorage.getItem(TOKENS_KEY);
+    if (raw) return JSON.parse(raw) as TokenEntry[];
+    // Migrate a single legacy token from the earlier single-token build.
+    const legacy = localStorage.getItem(LEGACY_TOKEN_KEY);
+    if (legacy) {
+      const migrated: TokenEntry[] = [
+        { id: newId(), label: "default", token: legacy },
+      ];
+      localStorage.setItem(TOKENS_KEY, JSON.stringify(migrated));
+      localStorage.removeItem(LEGACY_TOKEN_KEY);
+      return migrated;
+    }
   } catch {
-    return null;
+    /* ignore malformed storage */
   }
+  return [];
 }
 
-export function setToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token.trim());
+export function saveTokens(tokens: TokenEntry[]): void {
+  localStorage.setItem(TOKENS_KEY, JSON.stringify(tokens));
 }
 
-export function forgetToken(): void {
-  localStorage.removeItem(TOKEN_KEY);
+/** Build a new token entry with a trimmed value and a fresh id. */
+export function makeToken(label: string, token: string): TokenEntry {
+  return { id: newId(), label: label.trim() || "token", token: token.trim() };
 }
 
 // ---------------------------------------------------------------------------
@@ -144,8 +173,11 @@ async function graphql<D>(
     throw new GitHubError(`GitHub returned HTTP ${res.status}.`, res.status);
 
   const body = (await res.json()) as GqlResponse<D>;
-  if (body.errors?.length)
-    throw new GitHubError(body.errors.map((e) => e.message).join("; "));
+  if (body.errors?.length) {
+    // Collapse duplicates — GitHub often repeats the same policy error per field.
+    const messages = [...new Set(body.errors.map((e) => e.message))];
+    throw new GitHubError(messages.join("; "));
+  }
   return body;
 }
 
@@ -258,4 +290,102 @@ export async function fetchTriagePRs(
 /** Any visible PR whose mergeability GitHub hasn't computed yet (brief §4). */
 export function hasPendingMergeable(prs: NormalizedPR[]): boolean {
   return prs.some((pr) => pr.mergeable === "UNKNOWN");
+}
+
+// ---------------------------------------------------------------------------
+// Multi-token aggregation.
+// ---------------------------------------------------------------------------
+
+/** A per-token failure surfaced without failing the whole load. */
+export interface TokenError {
+  label: string;
+  message: string;
+}
+
+/** Distinct repo owners a token can reach — the basis for its auto-label. */
+export function ownersOf(catalog: Catalog): string[] {
+  const owners = new Set<string>();
+  for (const r of catalog.repos) owners.add(r.split("/")[0]);
+  return [...owners].sort();
+}
+
+/**
+ * A human label derived from what the token can actually reach: the single
+ * owner it's scoped to (the common fine-grained case), else the account login.
+ */
+export function suggestLabel(catalog: Catalog): string {
+  const owners = ownersOf(catalog);
+  if (owners.length === 1) return owners[0];
+  if (owners.length > 1) return `${catalog.login} · ${owners.length} owners`;
+  return catalog.login;
+}
+
+/** Resolve the viewer login from the first token that answers. */
+export async function resolveLogin(tokens: TokenEntry[]): Promise<string> {
+  for (const t of tokens) {
+    try {
+      return await fetchViewerLogin(t.token);
+    } catch {
+      /* try the next token */
+    }
+  }
+  throw new GitHubError("None of your saved tokens could reach GitHub.");
+}
+
+/**
+ * Which tokens to query for a scope. When catalogs are known, route an org/repo
+ * scope only to the tokens that can see that owner; otherwise (or if none match)
+ * fall back to trying every token. "Everything" always uses all tokens.
+ */
+export function tokensForScope(
+  scope: Scope,
+  tokens: TokenEntry[],
+  catalogs: Record<string, Catalog>,
+): TokenEntry[] {
+  if (scope.kind === "all") return tokens;
+  const owner =
+    scope.kind === "org" ? scope.value : scope.value.split("/")[0];
+  // Match on what a token demonstrably reaches — the owner appearing among its
+  // orgs or repos. We deliberately don't match on `catalog.login`: every one of
+  // a user's tokens shares that login, so it would select all of them. When
+  // nothing matches (or catalogs haven't loaded), fall back to trying them all.
+  const matched = tokens.filter((t) => {
+    const c = catalogs[t.id];
+    if (!c) return false;
+    if (c.orgs.includes(owner)) return true;
+    return c.repos.some((r) => r === scope.value || r.startsWith(`${owner}/`));
+  });
+  return matched.length ? matched : tokens;
+}
+
+/**
+ * Run the triage searches across several tokens and merge the deduped union by
+ * `url`. A token that fails is recorded in `errors` rather than sinking the
+ * whole load, so one broken/forbidden token can't blank the board.
+ */
+export async function fetchTriageForTokens(
+  tokens: TokenEntry[],
+  scope: Scope,
+  viewerLogin: string,
+): Promise<{ prs: NormalizedPR[]; errors: TokenError[] }> {
+  const errors: TokenError[] = [];
+  const lists = await Promise.all(
+    tokens.map(async (t) => {
+      try {
+        return await fetchTriagePRs(t.token, scope, viewerLogin);
+      } catch (e) {
+        errors.push({
+          label: t.label,
+          message: e instanceof Error ? e.message : String(e),
+        });
+        return [] as NormalizedPR[];
+      }
+    }),
+  );
+
+  const byUrl = new Map<string, NormalizedPR>();
+  for (const list of lists) {
+    for (const pr of list) if (!byUrl.has(pr.url)) byUrl.set(pr.url, pr);
+  }
+  return { prs: [...byUrl.values()], errors };
 }
