@@ -25,7 +25,7 @@ mkdirSync(OUT, { recursive: true });
 const launchOpts = EXE && existsSync(EXE) ? { executablePath: EXE } : {};
 const browser = await chromium.launch(launchOpts);
 
-async function shoot({ url, theme, width, file, fullPage, selector }) {
+async function shoot({ url, theme, width, file, fullPage, selector, clipHeight }) {
   const ctx = await browser.newContext({
     colorScheme: theme,
     viewport: { width, height: 900 },
@@ -46,7 +46,19 @@ async function shoot({ url, theme, width, file, fullPage, selector }) {
     window.scrollTo(0, 0);
   });
   await page.waitForTimeout(600);
-  if (selector) {
+  if (selector && clipHeight) {
+    // A cropped "peek" of the top of the element (tiles + first bucket).
+    const box = await page.locator(selector).boundingBox();
+    await page.screenshot({
+      path: `${OUT}/${file}`,
+      clip: {
+        x: box.x,
+        y: box.y,
+        width: box.width,
+        height: Math.min(box.height, clipHeight),
+      },
+    });
+  } else if (selector) {
     await page.locator(selector).screenshot({ path: `${OUT}/${file}` });
   } else {
     await page.screenshot({ path: `${OUT}/${file}`, fullPage: !!fullPage });
@@ -55,9 +67,15 @@ async function shoot({ url, theme, width, file, fullPage, selector }) {
   await ctx.close();
 }
 
-// Demo board (clipped to the app column) — the hero image reused everywhere.
+// Demo board (clipped to the app column) — the full board, linked from the
+// README and shown full-size in the welcome page's lightbox.
 await shoot({ url: `${BASE}?demo`, theme: "light", width: 1000, file: "demo-light.png", selector: ".app" });
 await shoot({ url: `${BASE}?demo`, theme: "dark", width: 1000, file: "demo-dark.png", selector: ".app" });
+
+// Cropped "peek" of the board top — the README embeds this (GitHub can't
+// CSS-crop) and links it to the full board above.
+await shoot({ url: `${BASE}?demo`, theme: "light", width: 1000, file: "demo-hero-light.png", selector: ".app", clipHeight: 500 });
+await shoot({ url: `${BASE}?demo`, theme: "dark", width: 1000, file: "demo-hero-dark.png", selector: ".app", clipHeight: 500 });
 
 // Welcome / no-token page — full page, for the README.
 await shoot({ url: BASE, theme: "light", width: 1040, file: "welcome-light.png", fullPage: true });

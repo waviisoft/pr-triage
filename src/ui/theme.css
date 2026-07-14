@@ -1006,9 +1006,44 @@ a {
 }
 
 /* Theme-aware screenshot: show the shot matching the active ground. Mirrors the
-   media-query + [data-theme] override pattern the rest of the tokens use. */
+   media-query + [data-theme] override pattern the rest of the tokens use.
+   It's a button — click to enlarge into the lightbox. */
 .welcome-shot {
+  position: relative;
+  display: block;
+  width: 100%;
   margin: 0 0 30px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+}
+.welcome-shot:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius);
+}
+.welcome-shot:hover .shot {
+  border-color: var(--accent);
+}
+/* "Click to enlarge" pill, revealed on hover/focus over the shot. */
+.welcome-shot-hint {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(20, 24, 40, 0.72);
+  border-radius: 999px;
+  opacity: 0;
+  transition: opacity 0.12s;
+  pointer-events: none;
+}
+.welcome-shot:hover .welcome-shot-hint,
+.welcome-shot:focus-visible .welcome-shot-hint {
+  opacity: 1;
 }
 .welcome-shot .shot {
   display: block;
@@ -1045,6 +1080,41 @@ a {
 }
 :root[data-theme="dark"] .welcome-shot .shot-dark {
   display: block;
+}
+
+/* Full-screen image viewer opened from the welcome screenshot. Sits above the
+   dialog modals (z-index 50) and scrolls when the board is taller than the
+   viewport. */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: auto;
+  padding: 44px 20px;
+  background: rgba(8, 10, 18, 0.86);
+}
+.lightbox-img {
+  display: block;
+  width: min(1100px, 100%);
+  height: auto;
+  border-radius: var(--radius);
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.55);
+  cursor: zoom-out;
+}
+.lightbox-close {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  border: none;
+}
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.26);
+  border: none;
 }
 
 .welcome-buckets {

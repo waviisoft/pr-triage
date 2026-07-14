@@ -23,14 +23,22 @@ using a read-only token you paste in. Nothing is sent anywhere else.
 ## See it in action
 
 <div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="public/demo-dark.png" />
-    <img
-      alt="The PR Triage board: open pull requests grouped into Needs my attention, Waiting on others, and Reviews to pick up."
-      src="public/demo-light.png"
-      width="860"
-    />
-  </picture>
+  <a href="public/demo-light.png">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="public/demo-hero-dark.png" />
+      <img
+        alt="The PR Triage board: open pull requests grouped into Needs my attention, Waiting on others, and Reviews to pick up."
+        src="public/demo-hero-light.png"
+        width="860"
+      />
+    </picture>
+  </a>
+  <br />
+  <sub>
+    A peek at the board — see the full thing:
+    <a href="public/demo-light.png">light</a> ·
+    <a href="public/demo-dark.png">dark</a>.
+  </sub>
 </div>
 
 No token handy? **[Try the live demo](https://waviisoft.github.io/pr-triage/?demo)** —

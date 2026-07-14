@@ -1,12 +1,20 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AddTokenForm } from "./AddTokenForm";
-import { IconLogo } from "./icons";
+import { IconClose, IconLogo } from "./icons";
 import { Modal } from "./Modal";
 
 const BASE = import.meta.env.BASE_URL;
 const SHOT_ALT =
   "The PR Triage board: open pull requests grouped into “Needs my attention”, " +
   "“Waiting on others”, and “Reviews to pick up”.";
+
+/** The board ground the page is actually showing (explicit theme, else the OS). */
+function effectiveDark(): boolean {
+  const pinned = document.documentElement.dataset.theme;
+  if (pinned === "dark") return true;
+  if (pinned === "light") return false;
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+}
 
 /**
  * First-run welcome page. Leads with what the app looks like (a theme-aware
@@ -22,6 +30,7 @@ export function WelcomePage({
   onDemo: () => void;
 }) {
   const [adding, setAdding] = useState(false);
+  const [zoomed, setZoomed] = useState(false);
 
   return (
     <div className="welcome">
@@ -57,10 +66,17 @@ export function WelcomePage({
         </div>
       </div>
 
-      <figure className="welcome-shot">
+      <button
+        type="button"
+        className="welcome-shot"
+        onClick={() => setZoomed(true)}
+        aria-label="View the sample board full size"
+        title="Click to enlarge"
+      >
         <img className="shot shot-light" src={`${BASE}demo-light.png`} alt={SHOT_ALT} />
         <img className="shot shot-dark" src={`${BASE}demo-dark.png`} alt={SHOT_ALT} />
-      </figure>
+        <span className="welcome-shot-hint" aria-hidden="true">⤢ Click to enlarge</span>
+      </button>
 
       <div className="welcome-buckets">
         <div className="welcome-bucket" data-severity="indigo">
@@ -89,6 +105,58 @@ export function WelcomePage({
       {adding ? (
         <AddTokenModal onAdd={onAdd} onClose={() => setAdding(false)} />
       ) : null}
+      {zoomed ? <Lightbox onClose={() => setZoomed(false)} /> : null}
+    </div>
+  );
+}
+
+/**
+ * Full-screen view of the sample board — the whole (uncropped) screenshot on a
+ * dark backdrop, scrollable when it's taller than the viewport. Dismisses on
+ * Escape, the close button, or a mousedown on the backdrop (not the image, so a
+ * click to inspect it doesn't close). The image matches the ground the page is
+ * showing, resolved once on open.
+ */
+function Lightbox({ onClose }: { onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const restoreTo = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      restoreTo?.focus?.();
+    };
+  }, [onClose]);
+
+  const src = `${BASE}${effectiveDark() ? "demo-dark" : "demo-light"}.png`;
+
+  return (
+    <div
+      className="lightbox"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Sample board, full size"
+      onMouseDown={onClose}
+    >
+      <button
+        ref={closeRef}
+        className="btn btn-icon lightbox-close"
+        aria-label="Close"
+        onClick={onClose}
+      >
+        <IconClose />
+      </button>
+      <img
+        className="lightbox-img"
+        src={src}
+        alt={SHOT_ALT}
+        onMouseDown={(e) => e.stopPropagation()}
+      />
     </div>
   );
 }

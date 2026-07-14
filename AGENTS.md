@@ -43,8 +43,10 @@ fixtures.
 `public/` holds screenshots used by the README and the welcome/no-token page
 (`src/ui/WelcomePage.tsx`):
 
-- `demo-light.png` / `demo-dark.png` — the demo board (also embedded on the
-  welcome page).
+- `demo-light.png` / `demo-dark.png` — the full demo board (shown full-size in
+  the welcome page's lightbox; linked from the README).
+- `demo-hero-light.png` / `demo-hero-dark.png` — a cropped "peek" of the board
+  top, embedded in the README (GitHub can't CSS-crop).
 - `welcome-light.png` / `welcome-dark.png` — the full welcome page.
 
 **If you make a substantial visual change to any UI that appears in these

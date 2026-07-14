@@ -32,4 +32,18 @@ describe("WelcomePage", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog", { name: /add a token/i })).toBeNull();
   });
+
+  it("opens a full-size lightbox from the screenshot", async () => {
+    render(<WelcomePage onAdd={vi.fn()} onDemo={vi.fn()} />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /view the sample board full size/i }),
+    );
+    await screen.findByRole("dialog", { name: /sample board, full size/i });
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(
+      screen.queryByRole("dialog", { name: /sample board, full size/i }),
+    ).toBeNull();
+  });
 });
