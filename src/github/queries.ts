@@ -91,6 +91,10 @@ export const CATALOG_QUERY = /* GraphQL */ `
         first: 100
         after: $after
         affiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER]
+        # ownerAffiliations defaults to [OWNER, COLLABORATOR], which silently
+        # drops org-owned repos where the viewer is only a member. Include
+        # ORGANIZATION_MEMBER so those appear in the scope picker.
+        ownerAffiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER]
         orderBy: { field: PUSHED_AT, direction: DESC }
       ) {
         pageInfo { hasNextPage endCursor }
