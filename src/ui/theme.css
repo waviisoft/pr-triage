@@ -667,9 +667,20 @@ a {
   color: var(--text-faint);
   margin-bottom: 10px;
 }
-:root[data-theme="dark"] .btn-primary,
-.btn-primary {
+/* On dark grounds the accent is a light indigo, so near-black button text reads
+   better than white; on light grounds the accent is dark, so keep white. Scope
+   the dark text to dark contexts — an earlier bare `.btn-primary` here darkened
+   the text in light mode too, making the label hard to read on the indigo fill. */
+@media (prefers-color-scheme: dark) {
+  .btn-primary {
+    color: #0f1117;
+  }
+}
+:root[data-theme="dark"] .btn-primary {
   color: #0f1117;
+}
+:root[data-theme="light"] .btn-primary {
+  color: #fff;
 }
 
 .field {
@@ -942,6 +953,210 @@ a {
   font-size: 12px;
 }
 
+/* --------------------------------------------------------- welcome page */
+
+.welcome {
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 40px 20px 48px;
+}
+/* Hero mirrors the social card: logo tile on the left, a left-aligned text
+   column (title, accent kicker, description, dot legend, actions) on the right. */
+.welcome-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 36px;
+  margin-bottom: 34px;
+}
+.welcome-hero > svg {
+  flex: none;
+  display: block;
+  /* Optically drop the tile to the title's cap height (the h1 has line-height
+     1, so its glyphs sit a touch below the box top). */
+  margin-top: 6px;
+  border-radius: 24px;
+  box-shadow: 0 8px 30px rgba(60, 73, 194, 0.28);
+}
+.welcome-hero-text {
+  min-width: 0;
+}
+.welcome-hero h1 {
+  font-size: 46px;
+  font-weight: 720;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin: 0;
+}
+.welcome-kicker {
+  margin: 10px 0 0;
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: 680;
+  letter-spacing: -0.01em;
+}
+.welcome-tagline {
+  max-width: 520px;
+  margin: 12px 0 16px;
+  color: var(--text-dim);
+  font-size: 15px;
+  line-height: 1.55;
+}
+.welcome-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.legend-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--sev, var(--slate));
+}
+.legend-dot + .legend-dot {
+  margin-left: -3px;
+}
+.legend-text {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+.welcome-cta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.btn-lg {
+  font-size: 14px;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+}
+.welcome-subtle {
+  margin: 12px 0 0;
+  color: var(--text-faint);
+  font-size: 12.5px;
+}
+.welcome-subtle a {
+  color: var(--text-dim);
+  border-bottom: 1px solid transparent;
+}
+.welcome-subtle a:hover {
+  color: var(--accent);
+  border-bottom-color: currentColor;
+}
+
+/* Theme-aware screenshot: show the shot matching the active ground. Mirrors the
+   media-query + [data-theme] override pattern the rest of the tokens use. */
+.welcome-shot {
+  margin: 0 0 30px;
+}
+.welcome-shot .shot {
+  display: block;
+  width: 100%;
+  /* Show a framed "peek" of the top of the board — the tiles and first bucket —
+     rather than the full (very tall) board. The live demo shows the rest. */
+  height: auto;
+  max-height: 540px;
+  object-fit: cover;
+  object-position: top center;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 28px rgba(20, 24, 40, 0.12);
+}
+.welcome-shot .shot-dark {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  .welcome-shot .shot-light {
+    display: none;
+  }
+  .welcome-shot .shot-dark {
+    display: block;
+  }
+}
+:root[data-theme="light"] .welcome-shot .shot-light {
+  display: block;
+}
+:root[data-theme="light"] .welcome-shot .shot-dark {
+  display: none;
+}
+:root[data-theme="dark"] .welcome-shot .shot-light {
+  display: none;
+}
+:root[data-theme="dark"] .welcome-shot .shot-dark {
+  display: block;
+}
+
+.welcome-buckets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 30px;
+}
+.welcome-bucket {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 16px 16px 18px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.welcome-bucket::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--sev, var(--slate));
+}
+.welcome-bucket h3 {
+  font-size: 13.5px;
+  font-weight: 650;
+  margin: 0 0 6px;
+  color: var(--sev, var(--text));
+}
+.welcome-bucket p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* Inline code in the add-token modal note (the modal lives outside .gate). */
+.modal-note code {
+  font-family: var(--font-mono);
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+@media (max-width: 620px) {
+  .welcome-buckets {
+    grid-template-columns: 1fr;
+  }
+  .welcome-hero {
+    flex-direction: column;
+    text-align: center;
+    gap: 18px;
+  }
+  .welcome-hero > svg {
+    width: 84px;
+    height: 84px;
+  }
+  .welcome-hero h1 {
+    font-size: 38px;
+  }
+  .welcome-legend,
+  .welcome-cta {
+    justify-content: center;
+  }
+}
+
 /* -------------------------------------------------------------- feedback */
 
 .banner {
@@ -959,6 +1174,22 @@ a {
   background: var(--surface-2);
   border: 1px solid var(--border);
   color: var(--text-dim);
+}
+/* Demo-mode banner: a note plus an exit button, kept on one line. */
+.banner-demo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  color: var(--text-dim);
+}
+.banner-demo strong {
+  color: var(--accent);
+}
+.banner-demo .btn {
+  flex-shrink: 0;
 }
 
 .center-note {

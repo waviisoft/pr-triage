@@ -20,6 +20,24 @@ It's a **fully static site** — no backend, no serverless functions, no proxy.
 Every request goes straight from your browser to `https://api.github.com/graphql`
 using a read-only token you paste in. Nothing is sent anywhere else.
 
+## See it in action
+
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/demo-dark.png" />
+    <img
+      alt="The PR Triage board: open pull requests grouped into Needs my attention, Waiting on others, and Reviews to pick up."
+      src="public/demo-light.png"
+      width="860"
+    />
+  </picture>
+</div>
+
+No token handy? **[Try the live demo](https://waviisoft.github.io/pr-triage/?demo)** —
+it runs entirely on built-in sample data (no token, no network, nothing leaves
+your browser). Or open the app and hit **View live demo** on the welcome screen;
+**Exit demo** drops you back to the real thing.
+
 ## The three buckets
 
 - **Needs my attention** — the ball is in your court:
@@ -171,6 +189,7 @@ src/
     map.ts         raw GraphQL node -> the normalized PR shape
     *.test.ts      client aggregation + query tests
   ui/          React components + theme.css design tokens (light/dark)
+  demo/        sample fixtures behind `?demo` (no token, no network)
   main.tsx     mounts <App/> and the footer
 ```
 

@@ -23,6 +23,13 @@ import {
   type TokenEntry,
   type TokenError,
 } from "../github/client";
+import {
+  DEMO_SCOPE,
+  DEMO_VIEWER,
+  demoPRs,
+  demoRequested,
+  setDemoParam,
+} from "../demo/data";
 import { Bucket } from "./Bucket";
 import { IconLogo, IconPencil, IconRefresh, IconSettings } from "./icons";
 import { GITHUB_BASE } from "./links";
@@ -127,7 +134,20 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: string }[] = [
   { value: "dark", label: "Dark", icon: "☾" },
 ];
 
+/** Turn the sample board on/off, keeping the `?demo` URL flag in sync. */
+function enterDemo(setDemo: (on: boolean) => void): void {
+  setDemoParam(true);
+  setDemo(true);
+}
+function exitDemo(setDemo: (on: boolean) => void): void {
+  setDemoParam(false);
+  setDemo(false);
+}
+
 export function App() {
+  // Demo mode (`?demo`) shows a sample board built from local fixtures — no
+  // token, no network — so the app can be tried and screenshotted instantly.
+  const [demo, setDemo] = useState(demoRequested);
   const [tokens, setTokens] = useState<TokenEntry[]>(getTokens);
   const [scope, setScope] = useState<Scope>(loadInitialScope);
   const [scopePickerOpen, setScopePickerOpen] = useState(false);
@@ -174,6 +194,18 @@ export function App() {
   }, [theme]);
 
   const load = useCallback(async () => {
+    if (demo) {
+      // Sample board: classify local fixtures through the real pipeline.
+      const prs = demoPRs();
+      setViewer(DEMO_VIEWER);
+      setView(buildView(prs, DEMO_VIEWER));
+      setInvolvedRepos([...new Set(prs.map((p) => p.repository))].sort());
+      setTokenErrors([]);
+      setPendingRecheck(false);
+      setLastUpdated(Date.now());
+      setStatus("idle");
+      return;
+    }
     if (!tokens.length) return;
     setStatus("loading");
     setError("");
@@ -196,7 +228,7 @@ export function App() {
       setError(e instanceof Error ? e.message : String(e));
       setStatus("error");
     }
-  }, [tokens, scope]);
+  }, [demo, tokens, scope]);
 
   useEffect(() => {
     // Fetch on mount and whenever the tokens/scope change. load() flips status
@@ -209,6 +241,7 @@ export function App() {
   // Fetch each token's accessible orgs/repos to populate the scope picker and
   // label tokens. Best-effort: a token that fails just contributes nothing.
   useEffect(() => {
+    if (demo) return;
     let cancelled = false;
     Promise.all(
       tokens.map(async (t) => {
@@ -227,7 +260,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [tokens]);
+  }, [tokens, demo]);
 
   // GitHub computes `mergeable` asynchronously; if anything is still UNKNOWN,
   // re-fetch shortly after so conflicts settle into place. Bounded to a few
@@ -369,13 +402,16 @@ export function App() {
     return `${maxDigits + 1}ch`;
   }, [view]);
 
-  if (!tokens.length) {
-    return <TokenGate onAdd={addToken} />;
+  if (!tokens.length && !demo) {
+    return <TokenGate onAdd={addToken} onDemo={() => enterDemo(setDemo)} />;
   }
 
-  const targets = scopeTargets(scope);
+  // In demo mode the board reads as a scoped org view (so "Reviews to pick up"
+  // shows) regardless of any real saved scope.
+  const viewScope = demo ? DEMO_SCOPE : scope;
+  const targets = scopeTargets(viewScope);
   const scopeLabel =
-    scope.kind === "all"
+    viewScope.kind === "all"
       ? "everything accessible to you"
       : targets.map(targetLabel).join(", ");
 
@@ -419,23 +455,25 @@ export function App() {
           <div className="scope-line">
             <a
               className="scope-link"
-              href={githubUrlForScope(scope)}
+              href={githubUrlForScope(viewScope)}
               target="_blank"
               rel="noreferrer"
               title="Open on GitHub ↗"
             >
               {scopeLabel}
             </a>
-            <button
-              className="scope-change"
-              onClick={() => setScopePickerOpen((o) => !o)}
-              aria-haspopup="dialog"
-              aria-expanded={scopePickerOpen}
-              aria-label="Change scope"
-              title="Change scope"
-            >
-              <IconPencil />
-            </button>
+            {demo ? null : (
+              <button
+                className="scope-change"
+                onClick={() => setScopePickerOpen((o) => !o)}
+                aria-haspopup="dialog"
+                aria-expanded={scopePickerOpen}
+                aria-label="Change scope"
+                title="Change scope"
+              >
+                <IconPencil />
+              </button>
+            )}
             {viewer ? (
               <>
                 {" · viewed as "}
@@ -476,6 +514,18 @@ export function App() {
         </div>
       </header>
 
+      {demo ? (
+        <div className="banner banner-demo">
+          <span>
+            <strong>Demo mode</strong> — sample data, no token or network. This is
+            what the board looks like once you connect a token.
+          </span>
+          <button className="btn" onClick={() => exitDemo(setDemo)}>
+            Exit demo
+          </button>
+        </div>
+      ) : null}
+
       {status === "error" ? (
         <div className="banner banner-error">{error}</div>
       ) : null}
@@ -508,7 +558,7 @@ export function App() {
               key={b.bucket}
               view={b}
               emptyNote={
-                b.bucket === "pick-up" && scope.kind === "all"
+                b.bucket === "pick-up" && viewScope.kind === "all"
                   ? "Pick a specific org or repo to find unclaimed reviews to grab."
                   : undefined
               }
