@@ -197,6 +197,51 @@ describe("fetchTriageForTokens (aggregation)", () => {
     expect(errors[0].message).toMatch(/403/);
   });
 
+  it("a classic token's real CI rollup is not shadowed by an earlier token's null", async () => {
+    // The fine-grained PAT (added first) can't read check runs and returns the
+    // shared PR with a null rollup; the classic PAT returns the same PR with a
+    // real rollup. Dedupe must keep the informative value, not the first-seen one.
+    const withRollup = (slug: string, state: string | null) => ({
+      ...node(slug),
+      commits: {
+        nodes: [{ commit: { statusCheckRollup: state ? { state } : null } }],
+      },
+    });
+    const sets: Record<string, unknown[]> = {
+      ta: [withRollup("shared", null)], // fine-grained: no check-run access
+      tb: [withRollup("shared", "FAILURE")], // classic: real rollup
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: { headers: Record<string, string> }) => {
+        const tok = init.headers.Authorization.replace("Bearer ", "");
+        return new Response(
+          JSON.stringify({
+            data: {
+              search: {
+                pageInfo: { hasNextPage: false, endCursor: null },
+                nodes: sets[tok] ?? [],
+              },
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }),
+    );
+
+    const { prs } = await fetchTriageForTokens(
+      [
+        { id: "A", label: "fine-grained", token: "ta" },
+        { id: "B", label: "classic", token: "tb" },
+      ],
+      { kind: "all" },
+      "me",
+    );
+
+    const shared = prs.find((p) => p.url.endsWith("/shared"));
+    expect(shared?.statusCheckRollup).toBe("FAILURE");
+  });
+
   it("uses partial data when a token hits a field-level permission error", async () => {
     // A read-only fine-grained token can't read statusCheckRollup; GitHub
     // returns that as a field error alongside the PRs. The PRs must still show.

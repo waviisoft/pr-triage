@@ -65,10 +65,23 @@ function.
 3. Grant these read permissions:
    - **Pull requests: Read**
    - **Metadata: Read** (required by GitHub for any repo access)
-   - **Commit statuses: Read** (and **Checks: Read** if it appears) — *optional*,
-     only for the CI pass/fail dots. Not **Actions** or **Workflows** (those are
-     for managing/editing workflows, not reading status). The app works fine
-     without these; the CI rollup is best-effort.
+   - **Commit statuses: Read** — *optional*, for the CI pass/fail dots. **Important
+     caveat:** the CI rollup is the union of two GitHub systems, and a fine-grained
+     PAT can only read one of them. **GitHub Actions** (and most modern CI) reports
+     as **check runs**, which need a *Checks* permission — and GitHub does **not
+     currently offer a Checks permission for fine-grained PATs** ([they disabled
+     it](https://github.com/orgs/community/discussions/129512); there's no such
+     entry to grant). So with any fine-grained token, Actions-based PRs show *no*
+     dot, and only PRs using the legacy **Status API** (covered by *Commit statuses:
+     Read*) light up. That's the usual reason one PR shows a status and the rest
+     don't. **Actions** and **Workflows** don't help either — *Actions* reads
+     workflow runs/artifacts (a different API from check runs) and *Workflows* is
+     write access to the workflow files themselves; neither populates the CI rollup.
+   - To get **GitHub Actions** CI dots, use a **classic PAT** instead (scope `repo`,
+     or `public_repo` for public repos only) — classic tokens can still read check
+     runs. Trade-off: classic PATs are broader in scope and some orgs block them
+     entirely. The app works fine without any CI permission; the rollup is
+     best-effort.
 4. Open the app and paste the token. The app checks it, auto-labels it by the
    owner it can reach, and you're in.
 
