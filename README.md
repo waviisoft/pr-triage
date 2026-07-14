@@ -153,7 +153,7 @@ src/
     map.ts         raw GraphQL node -> the normalized PR shape
     *.test.ts      client aggregation + query tests
   ui/          React components + theme.css design tokens (light/dark)
-  main.tsx     mounts <App/>, the footer, and the corner sash
+  main.tsx     mounts <App/> and the footer
 ```
 
 Per token, several GitHub searches feed the view — everything you're **involved**

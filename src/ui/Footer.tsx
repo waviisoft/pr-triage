@@ -3,7 +3,7 @@ import { newBugReportUrl, REPO_LICENSE_URL, REPO_URL } from "./links";
 
 /** Page footer: copyright, the license (spelled out + linked), a "file a bug"
  *  link that pre-fills the report with the browser's user agent, and a source
- *  link that also serves small screens where the sash is hidden. */
+ *  link to the repository. */
 export function Footer() {
   const bugUrl = newBugReportUrl(
     typeof navigator === "undefined" ? "" : navigator.userAgent,
