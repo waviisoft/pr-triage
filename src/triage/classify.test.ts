@@ -27,7 +27,7 @@ function pr(overrides: Partial<NormalizedPR> = {}): NormalizedPR {
 const user = (login: string) => ({ type: "User" as const, login });
 const team = (name: string) => ({ type: "Team" as const, login: name });
 
-describe("classify — my PRs (§3, mine)", () => {
+describe("classify — my PRs (I'm the author)", () => {
   it("draft → Needs me / draft (outranks everything)", () => {
     const c = classify(
       pr({
@@ -148,7 +148,7 @@ describe("classify — my PRs (§3, mine)", () => {
   });
 });
 
-describe("classify — others' PRs (§3, not mine)", () => {
+describe("classify — others' PRs (I'm a reviewer)", () => {
   const theirs = (overrides: Partial<NormalizedPR> = {}) =>
     pr({ authorLogin: "alice", ...overrides });
 
