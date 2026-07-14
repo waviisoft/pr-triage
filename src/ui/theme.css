@@ -599,6 +599,18 @@ a {
   font-size: 12px;
   flex-shrink: 0;
 }
+/* Compact icon button in the token row — override .btn-icon's 36px box so it
+   sits inline with the text "Remove" button rather than towering over it. */
+.token-refresh {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  color: var(--text-dim);
+}
+.token-refresh:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--border);
+}
 .token-remove {
   flex-shrink: 0;
   color: var(--rose);
@@ -873,7 +885,9 @@ a {
   color: var(--text-dim);
   margin-bottom: 6px;
 }
-.gate .actions {
+/* Shared by the first-run gate and the token manager's add form (AddTokenForm).
+   Scoping it to `.gate` left the modal's submit/create buttons with no gap. */
+.actions {
   margin-top: 14px;
   display: flex;
   gap: 8px;
