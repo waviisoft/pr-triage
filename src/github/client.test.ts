@@ -278,6 +278,46 @@ describe("fetchTriageForTokens (aggregation)", () => {
     ).toBe(true);
   });
 
+  it("excludes archived repositories from every search", async () => {
+    // PRs in an archived repo are inert (can't merge/push/review), so no search
+    // — involved, review-requested, reviewed-by, or unclaimed, at any scope —
+    // should ever pull them in. GitHub includes archived repos unless the query
+    // says otherwise, so every generated search must carry `archived:false`.
+    const queries: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: { body: string }) => {
+        const { variables } = JSON.parse(init.body) as {
+          variables: { q: string };
+        };
+        queries.push(variables.q);
+        return new Response(
+          JSON.stringify({
+            data: {
+              search: {
+                pageInfo: { hasNextPage: false, endCursor: null },
+                nodes: [],
+              },
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }),
+    );
+
+    await fetchTriageForTokens(
+      [{ id: "A", label: "andy", token: "ta" }],
+      { kind: "repo", value: "o/n" },
+      "me",
+    );
+
+    // Includes the unclaimed (`review:none`) search, which is only present for a
+    // concrete target — proving that search carries the qualifier too.
+    expect(queries.length).toBeGreaterThan(0);
+    expect(queries.every((q) => q.includes("archived:false"))).toBe(true);
+    expect(queries.some((q) => q.includes("review:none"))).toBe(true);
+  });
+
   it("treats a null-data response with errors as a real failure", async () => {
     vi.stubGlobal(
       "fetch",

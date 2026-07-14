@@ -91,12 +91,17 @@ function targetQualifier(t: ScopeTarget): string {
   return `${t.kind}:${t.value}`;
 }
 
+// A PR in an archived repository is inert — you can't merge, push to, or review
+// into it — so it never belongs on the board. GitHub's search *includes*
+// archived repos unless told otherwise, so every search carries `archived:false`.
+const NOT_ARCHIVED = "archived:false";
+
 /** The three "involved" searches for one qualifier (`involves` omits review roles). */
 function involvedSearches(qualifier: string): string[] {
   return [
-    `is:pr is:open involves:@me ${qualifier}`,
-    `is:pr is:open review-requested:@me ${qualifier}`,
-    `is:pr is:open reviewed-by:@me ${qualifier}`,
+    `is:pr is:open ${NOT_ARCHIVED} involves:@me ${qualifier}`,
+    `is:pr is:open ${NOT_ARCHIVED} review-requested:@me ${qualifier}`,
+    `is:pr is:open ${NOT_ARCHIVED} reviewed-by:@me ${qualifier}`,
   ].map((q) => q.trim());
 }
 
@@ -121,7 +126,7 @@ function searchesForScope(scope: Scope): string[] {
   for (const t of targets) {
     const q = targetQualifier(t);
     out.push(...involvedSearches(q));
-    out.push(`is:pr is:open draft:false review:none ${q}`);
+    out.push(`is:pr is:open ${NOT_ARCHIVED} draft:false review:none ${q}`);
   }
   return out;
 }
