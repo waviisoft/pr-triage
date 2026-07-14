@@ -72,3 +72,30 @@ export const INVOLVED_QUERY = /* GraphQL */ `
  * qualifier, so `client.ts` filters `reviewRequests` empty in code.
  */
 export const UNCLAIMED_QUERY = INVOLVED_QUERY;
+
+/**
+ * Catalog — the orgs and repositories this token can actually reach. Used to
+ * populate the scope switcher so the user picks from a list instead of typing.
+ * A fine-grained PAT only sees repos it is explicitly scoped to (and whose org
+ * has approved it), so this list is also the honest answer to "why is repo X
+ * showing nothing?" — if X isn't here, the token can't see it.
+ */
+export const CATALOG_QUERY = /* GraphQL */ `
+  query Catalog($after: String) {
+    viewer {
+      login
+      organizations(first: 100) {
+        nodes { login }
+      }
+      repositories(
+        first: 100
+        after: $after
+        affiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER]
+        orderBy: { field: PUSHED_AT, direction: DESC }
+      ) {
+        pageInfo { hasNextPage endCursor }
+        nodes { nameWithOwner }
+      }
+    }
+  }
+`;

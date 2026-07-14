@@ -1,6 +1,6 @@
 import type { NormalizedPR } from "../triage/types";
 import { mapPR, type RawPR } from "./map";
-import { INVOLVED_QUERY } from "./queries";
+import { CATALOG_QUERY, INVOLVED_QUERY } from "./queries";
 
 const GRAPHQL_ENDPOINT = "https://api.github.com/graphql";
 const TOKEN_KEY = "pr-triage:token";
@@ -77,22 +77,43 @@ export class GitHubError extends Error {
   }
 }
 
-interface SearchResponse {
-  data?: {
-    viewer?: { login: string };
-    search?: {
-      pageInfo: { hasNextPage: boolean; endCursor: string | null };
-      nodes: (RawPR | Record<string, never>)[];
+interface PageInfo {
+  hasNextPage: boolean;
+  endCursor: string | null;
+}
+
+interface SearchData {
+  search?: {
+    pageInfo: PageInfo;
+    nodes: (RawPR | Record<string, never>)[];
+  };
+}
+
+interface ViewerData {
+  viewer?: { login: string };
+}
+
+interface CatalogData {
+  viewer?: {
+    login: string;
+    organizations: { nodes: ({ login: string } | null)[] };
+    repositories: {
+      pageInfo: PageInfo;
+      nodes: ({ nameWithOwner: string } | null)[];
     };
   };
+}
+
+interface GqlResponse<D> {
+  data?: D;
   errors?: { message: string }[];
 }
 
-async function graphql(
+async function graphql<D>(
   token: string,
   query: string,
   variables: Record<string, unknown>,
-): Promise<SearchResponse> {
+): Promise<GqlResponse<D>> {
   let res: Response;
   try {
     res = await fetch(GRAPHQL_ENDPOINT, {
@@ -122,7 +143,7 @@ async function graphql(
   if (!res.ok)
     throw new GitHubError(`GitHub returned HTTP ${res.status}.`, res.status);
 
-  const body = (await res.json()) as SearchResponse;
+  const body = (await res.json()) as GqlResponse<D>;
   if (body.errors?.length)
     throw new GitHubError(body.errors.map((e) => e.message).join("; "));
   return body;
@@ -130,10 +151,49 @@ async function graphql(
 
 /** Resolve the authenticated user's login (needed for client-side classify). */
 export async function fetchViewerLogin(token: string): Promise<string> {
-  const body = await graphql(token, `query { viewer { login } }`, {});
+  const body = await graphql<ViewerData>(token, `query { viewer { login } }`, {});
   const login = body.data?.viewer?.login;
   if (!login) throw new GitHubError("Could not resolve the viewer login.");
   return login;
+}
+
+/** The orgs and repositories a token can reach — powers the scope picker. */
+export interface Catalog {
+  login: string;
+  orgs: string[];
+  repos: string[];
+}
+
+/**
+ * List the orgs and repos this token can actually see. A fine-grained PAT only
+ * returns repos it is scoped to (and whose org approved it), so this is both the
+ * scope picker's source and the diagnosis for "repo X shows nothing": if X is
+ * absent here, the token cannot see it.
+ */
+export async function fetchCatalog(token: string): Promise<Catalog> {
+  const orgs = new Set<string>();
+  const repos: string[] = [];
+  let login = "";
+  let after: string | null = null;
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const body: GqlResponse<CatalogData> = await graphql<CatalogData>(
+      token,
+      CATALOG_QUERY,
+      { after },
+    );
+    const v = body.data?.viewer;
+    if (!v) break;
+    login = v.login;
+    for (const o of v.organizations.nodes) if (o?.login) orgs.add(o.login);
+    for (const r of v.repositories.nodes)
+      if (r?.nameWithOwner) repos.push(r.nameWithOwner);
+
+    if (!v.repositories.pageInfo.hasNextPage) break;
+    after = v.repositories.pageInfo.endCursor;
+  }
+
+  return { login, orgs: [...orgs].sort(), repos };
 }
 
 /** Page through one search query, mapping every PR node as we go. */
@@ -146,10 +206,11 @@ async function runSearch(
   let after: string | null = null;
 
   for (let page = 0; page < MAX_PAGES; page++) {
-    const body: SearchResponse = await graphql(token, INVOLVED_QUERY, {
-      q,
-      after,
-    });
+    const body: GqlResponse<SearchData> = await graphql<SearchData>(
+      token,
+      INVOLVED_QUERY,
+      { q, after },
+    );
     const search = body.data?.search;
     if (!search) break;
 

@@ -211,16 +211,19 @@ a {
   cursor: default;
 }
 
-/* square icon-only buttons (theme, refresh, settings) */
+/* square icon-only buttons (refresh, settings) */
 .btn-icon {
-  padding: 6px 9px;
-  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  font-size: 19px;
   line-height: 1;
-  min-width: 34px;
-  text-align: center;
 }
 .icon-spin {
-  display: inline-block;
+  display: inline-flex;
 }
 .icon-spin.busy {
   animation: spin 0.7s linear infinite;

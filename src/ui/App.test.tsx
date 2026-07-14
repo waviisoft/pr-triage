@@ -11,6 +11,7 @@ vi.mock("../github/client", () => ({
   forgetToken,
   fetchViewerLogin: vi.fn(async () => "me"),
   fetchTriagePRs: vi.fn(async () => []),
+  fetchCatalog: vi.fn(async () => ({ login: "me", orgs: [], repos: [] })),
   hasPendingMergeable: () => false,
 }));
 
