@@ -1,0 +1,46 @@
+name: CodeQL
+
+# Static analysis for the JavaScript/TypeScript sources. It's the automated gate
+# a solo maintainer can require in place of a second reviewer: runs on every PR,
+# on pushes to main, and weekly so newly-published queries re-scan unchanged code.
+# Results land in the repo's Security tab.
+#
+# NOTE: this is CodeQL "advanced setup" (a workflow file). Do not also enable
+# "Default setup" in Settings → Code security — GitHub allows only one, and
+# turning on default setup disables this workflow.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "27 4 * * 1" # Mondays, 04:27 UTC
+
+# Cancel an in-flight analysis when a newer commit lands on the same ref.
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # check out the code
+      security-events: write # upload results to the Security tab
+      actions: read # read workflow run metadata (required on private repos)
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          # 'security-extended' widens the security query set beyond the default
+          # without the code-quality queries, keeping the gate high-signal.
+          queries: security-extended
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
