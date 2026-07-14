@@ -125,11 +125,12 @@ interface ViewerData {
 interface CatalogData {
   viewer?: {
     login: string;
-    organizations: { nodes: ({ login: string } | null)[] };
-    repositories: {
+    // Both may be null when the token lacks the relevant permission.
+    organizations?: { nodes: ({ login: string } | null)[] } | null;
+    repositories?: {
       pageInfo: PageInfo;
       nodes: ({ nameWithOwner: string } | null)[];
-    };
+    } | null;
   };
 }
 
@@ -173,9 +174,16 @@ async function graphql<D>(
     throw new GitHubError(`GitHub returned HTTP ${res.status}.`, res.status);
 
   const body = (await res.json()) as GqlResponse<D>;
-  if (body.errors?.length) {
-    // Collapse duplicates — GitHub often repeats the same policy error per field.
-    const messages = [...new Set(body.errors.map((e) => e.message))];
+  // A read-only fine-grained token often lacks permission for a *field* we
+  // request — `statusCheckRollup` needs "Checks: Read", and `viewer.organizations`
+  // needs org permissions. GitHub reports those as field-level errors while still
+  // returning the rest of the data. Treat errors as fatal ONLY when no usable data
+  // came back (e.g. an org that forbids the token outright); otherwise use the
+  // partial data so a correctly-scoped token still works, just without CI dots.
+  if (body.data == null) {
+    const messages = body.errors?.length
+      ? [...new Set(body.errors.map((e) => e.message))]
+      : [`GitHub returned no data (HTTP ${res.status}).`];
     throw new GitHubError(messages.join("; "));
   }
   return body;
@@ -216,13 +224,16 @@ export async function fetchCatalog(token: string): Promise<Catalog> {
     );
     const v = body.data?.viewer;
     if (!v) break;
-    login = v.login;
-    for (const o of v.organizations.nodes) if (o?.login) orgs.add(o.login);
-    for (const r of v.repositories.nodes)
+    if (v.login) login = v.login;
+    // `organizations` may be null when the token has no org permissions.
+    for (const o of v.organizations?.nodes ?? [])
+      if (o?.login) orgs.add(o.login);
+    const repoConn = v.repositories;
+    for (const r of repoConn?.nodes ?? [])
       if (r?.nameWithOwner) repos.push(r.nameWithOwner);
 
-    if (!v.repositories.pageInfo.hasNextPage) break;
-    after = v.repositories.pageInfo.endCursor;
+    if (!repoConn?.pageInfo?.hasNextPage) break;
+    after = repoConn.pageInfo.endCursor;
   }
 
   return { login, orgs: [...orgs].sort(), repos };

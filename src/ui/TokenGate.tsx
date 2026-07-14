@@ -18,8 +18,10 @@ export function TokenGate({
         <ul>
           <li>
             A <strong>fine-grained</strong> PAT is simplest and safest — grant
-            only <code>Pull requests: Read</code> and <code>Metadata: Read</code>
-            . It’s scoped to <em>one</em> owner (your account or one org).
+            <code>Pull requests: Read</code> and <code>Metadata: Read</code>.
+            For the CI pass/fail dots, optionally add <code>Commit statuses: Read</code>{" "}
+            (and <code>Checks: Read</code> if shown). It’s scoped to <em>one</em>{" "}
+            owner (your account or one org).
           </li>
           <li>
             To span several accounts/orgs, add <strong>one token per owner</strong>
