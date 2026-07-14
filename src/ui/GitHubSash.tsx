@@ -1,4 +1,4 @@
-const REPO_URL = "https://github.com/waviisoft/pr-triage";
+import { REPO_URL } from "./links";
 
 /**
  * "Fork me on GitHub"-style corner ribbon linking to the source repo, where a
