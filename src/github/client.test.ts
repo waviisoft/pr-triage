@@ -144,4 +144,60 @@ describe("fetchTriageForTokens (aggregation)", () => {
     expect(errors[0].label).toBe("broken");
     expect(errors[0].message).toMatch(/403/);
   });
+
+  it("uses partial data when a token hits a field-level permission error", async () => {
+    // A read-only fine-grained token can't read statusCheckRollup; GitHub
+    // returns that as a field error alongside the PRs. The PRs must still show.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            data: {
+              search: {
+                pageInfo: { hasNextPage: false, endCursor: null },
+                nodes: [node("p1")],
+              },
+            },
+            errors: [
+              { message: "Resource not accessible by personal access token" },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+
+    const { prs, errors } = await fetchTriageForTokens(
+      [{ id: "A", label: "andy", token: "ta" }],
+      { kind: "all" },
+      "me",
+    );
+    expect(prs.map((p) => p.url)).toContain("https://github.com/o/r/pull/p1");
+    expect(errors).toHaveLength(0);
+  });
+
+  it("treats a null-data response with errors as a real failure", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            data: null,
+            errors: [{ message: "forbids access via a personal access token" }],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+
+    const { prs, errors } = await fetchTriageForTokens(
+      [{ id: "A", label: "andy", token: "ta" }],
+      { kind: "all" },
+      "me",
+    );
+    expect(prs).toHaveLength(0);
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toMatch(/forbids/);
+  });
 });

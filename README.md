@@ -48,9 +48,11 @@ as a pure, exhaustively-tested function.
    <https://github.com/settings/personal-access-tokens/new>
 2. Set the **Resource owner** to the account or org whose PRs you want to triage,
    and select the repositories (or all of them).
-3. Grant only these read permissions — nothing more:
+3. Grant these read permissions:
    - **Pull requests: Read**
    - **Metadata: Read** (required by GitHub for any repo access)
+   - **Checks: Read** — *optional*, only needed for the CI pass/fail dots. The
+     app works fine without it (those fields are treated as best-effort).
 4. Open the app and paste the token. The app checks it, auto-labels it by the
    owner it can reach, and you're in.
 
