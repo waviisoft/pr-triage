@@ -544,9 +544,9 @@ a {
    optical center of the row and shrink it so it reads as a caret, not a bullet. */
 .link-btn .caret {
   display: inline-block;
-  font-size: 9px;
-  vertical-align: 1px;
-  margin-left: 1px;
+  font-size: 11px;
+  vertical-align: baseline;
+  margin-left: 2px;
 }
 
 /* expandable list of the repos a token can reach */
