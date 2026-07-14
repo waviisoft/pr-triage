@@ -137,6 +137,9 @@ export function App() {
   const [error, setError] = useState("");
   const [tokenErrors, setTokenErrors] = useState<TokenError[]>([]);
   const [pendingRecheck, setPendingRecheck] = useState(false);
+  // When the currently shown data was last successfully loaded (epoch ms), or
+  // null before the first load. Drives the "stale" note next to Refresh.
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const [catalogs, setCatalogs] = useState<Record<string, Catalog>>({});
   // Repos observed in results — provably reachable even when the catalog query
@@ -185,6 +188,7 @@ export function App() {
       });
       setTokenErrors(errors);
       setPendingRecheck(hasPendingMergeable(prs));
+      setLastUpdated(Date.now());
       setStatus("idle");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -414,20 +418,14 @@ export function App() {
           </div>
         </div>
         <div className="header-actions">
-          <button
-            className="btn btn-icon"
-            title="Refresh"
-            aria-label="Refresh"
-            onClick={() => {
+          <RefreshButton
+            lastUpdated={lastUpdated}
+            loading={status === "loading"}
+            onRefresh={() => {
               mergeRechecks.current = 0;
               void load();
             }}
-            disabled={status === "loading"}
-          >
-            <IconRefresh
-              className={status === "loading" ? "icon-spin busy" : "icon-spin"}
-            />
-          </button>
+          />
           <SettingsMenu
             theme={theme}
             onTheme={setTheme}
@@ -658,6 +656,65 @@ function ScopePicker({
           : "Pick from the list, or type and press Enter. Add more than one to watch several at once."}
       </div>
     </div>
+  );
+}
+
+/** Data older than this counts as "stale" and earns a note by the Refresh button. */
+const STALE_AFTER_MS = 5 * 60 * 1000;
+
+/** Compact "7m ago" / "2h ago" / "3d ago" from an elapsed duration in ms. */
+function agoLabel(elapsedMs: number): string {
+  const mins = Math.max(1, Math.round(elapsedMs / 60000));
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.round(hrs / 24)}d ago`;
+}
+
+/**
+ * Refresh control. When the shown data hasn't been reloaded in over 5 minutes it
+ * grows a "stale" note saying when it was last updated, so a long-open tab makes
+ * clear the numbers may be old. A timer re-checks staleness (and ticks the age
+ * up) without needing a user action.
+ */
+export function RefreshButton({
+  lastUpdated,
+  loading,
+  onRefresh,
+}: {
+  lastUpdated: number | null;
+  loading: boolean;
+  onRefresh: () => void;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    // Minute-granularity label, so a 30s re-check keeps it honest cheaply.
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const age = lastUpdated == null ? 0 : Math.max(0, now - lastUpdated);
+  const stale = lastUpdated != null && age > STALE_AFTER_MS;
+  const exact =
+    lastUpdated == null ? null : new Date(lastUpdated).toLocaleString();
+
+  return (
+    <>
+      {stale ? (
+        <span className="stale-note" title={`Last updated ${exact}`}>
+          Updated {agoLabel(age)}
+        </span>
+      ) : null}
+      <button
+        className="btn btn-icon"
+        title={exact ? `Refresh — last updated ${exact}` : "Refresh"}
+        aria-label="Refresh"
+        onClick={onRefresh}
+        disabled={loading}
+      >
+        <IconRefresh className={loading ? "icon-spin busy" : "icon-spin"} />
+      </button>
+    </>
   );
 }
 
