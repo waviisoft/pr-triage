@@ -22,7 +22,7 @@ import {
   type TokenError,
 } from "../github/client";
 import { Bucket } from "./Bucket";
-import { IconRefresh, IconSettings } from "./icons";
+import { IconPencil, IconRefresh, IconSettings } from "./icons";
 import { Tile } from "./Tile";
 import { TokenGate } from "./TokenGate";
 import { TokenManager } from "./TokenManager";
@@ -75,6 +75,16 @@ function persistScope(scope: Scope): void {
   }
 }
 
+/** The GitHub page that best mirrors a scope, for the scope-line link. */
+function githubUrlForScope(scope: Scope): string {
+  if (scope.kind === "repo") return `https://github.com/${scope.value}/pulls`;
+  if (scope.kind === "org")
+    return `https://github.com/pulls?q=${encodeURIComponent(
+      `is:open is:pr archived:false involves:@me org:${scope.value}`,
+    )}`;
+  return "https://github.com/pulls";
+}
+
 function initialTheme(): Theme {
   const saved = localStorage.getItem(THEME_KEY);
   if (saved === "light" || saved === "dark" || saved === "system") return saved;
@@ -91,6 +101,7 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: string }[] = [
 export function App() {
   const [tokens, setTokens] = useState<TokenEntry[]>(getTokens);
   const [scope, setScope] = useState<Scope>(loadInitialScope);
+  const [scopePickerOpen, setScopePickerOpen] = useState(false);
   const [viewer, setViewer] = useState<string | null>(null);
   const [view, setView] = useState<TriageView | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
@@ -227,6 +238,7 @@ export function App() {
   const changeScope = useCallback((s: Scope) => {
     setScope(s);
     persistScope(s);
+    setScopePickerOpen(false);
   }, []);
 
   // Scope picker + access hints draw from the union of every token's catalog
@@ -290,22 +302,50 @@ export function App() {
         <div>
           <h1>PR Triage</h1>
           <div className="scope-line">
-            {scopeLabel}
+            <a
+              className="scope-link"
+              href={githubUrlForScope(scope)}
+              target="_blank"
+              rel="noreferrer"
+              title="Open on GitHub ↗"
+            >
+              {scopeLabel}
+            </a>
+            <button
+              className="scope-change"
+              onClick={() => setScopePickerOpen((o) => !o)}
+              aria-haspopup="dialog"
+              aria-expanded={scopePickerOpen}
+              aria-label="Change scope"
+              title="Change scope"
+            >
+              <IconPencil />
+            </button>
             {viewer ? (
               <>
                 {" · viewed as "}
-                <span className="viewer">@{viewer}</span>
+                <a
+                  className="viewer"
+                  href={`https://github.com/${viewer}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  @{viewer}
+                </a>
               </>
             ) : null}
             {tokens.length > 1 ? ` · ${tokens.length} tokens` : null}
+            {scopePickerOpen ? (
+              <ScopePicker
+                scope={scope}
+                catalog={mergedCatalog}
+                onApply={changeScope}
+                onClose={() => setScopePickerOpen(false)}
+              />
+            ) : null}
           </div>
         </div>
         <div className="header-actions">
-          <ScopeSwitcher
-            scope={scope}
-            catalog={mergedCatalog}
-            onApply={changeScope}
-          />
           <button
             className="btn btn-icon"
             title="Refresh"
@@ -399,62 +439,110 @@ export function App() {
   );
 }
 
-function ScopeSwitcher({
+/**
+ * Popover (under the title) for changing what you're triaging. No "Go": picking
+ * "Everything" or choosing an org/repo from the list applies immediately;
+ * typing a custom value applies on Enter.
+ */
+function ScopePicker({
   scope,
   catalog,
   onApply,
+  onClose,
 }: {
   scope: Scope;
   catalog: Catalog | null;
   onApply: (s: Scope) => void;
+  onClose: () => void;
 }) {
   const [kind, setKind] = useState<Scope["kind"]>(scope.kind);
   const [value, setValue] = useState(scope.kind === "all" ? "" : scope.value);
+  const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const apply = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (kind === "all") {
-      onApply({ kind: "all" });
-      return;
-    }
-    const v = value.trim();
-    if (v) onApply({ kind, value: v });
-  };
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
 
-  // The tokens' accessible orgs/repos, offered as a picklist for the field.
+  useEffect(() => {
+    if (kind !== "all") inputRef.current?.focus();
+  }, [kind]);
+
   const options =
     kind === "org" ? catalog?.orgs : kind === "repo" ? catalog?.repos : undefined;
-  const listId = kind === "org" ? "scope-orgs" : "scope-repos";
+  const listId = kind === "org" ? "scope-pop-orgs" : "scope-pop-repos";
+
+  const applyValue = (v: string) => {
+    const t = v.trim();
+    if (t && kind !== "all") onApply({ kind, value: t });
+  };
 
   return (
-    <form className="select-row" onSubmit={apply}>
-      <select
-        className="field"
-        style={{ width: "auto" }}
-        value={kind}
-        onChange={(e) => setKind(e.target.value as Scope["kind"])}
-        aria-label="Scope kind"
-      >
-        <option value="all">everything</option>
-        <option value="org">org</option>
-        <option value="repo">repo</option>
-      </select>
+    <div className="scope-pop" ref={ref} role="dialog" aria-label="Change scope">
+      <div className="scope-kinds">
+        <button
+          type="button"
+          className="chip-btn"
+          data-active={kind === "all"}
+          onClick={() => onApply({ kind: "all" })}
+        >
+          Everything
+        </button>
+        <button
+          type="button"
+          className="chip-btn"
+          data-active={kind === "org"}
+          onClick={() => setKind("org")}
+        >
+          Org
+        </button>
+        <button
+          type="button"
+          className="chip-btn"
+          data-active={kind === "repo"}
+          onClick={() => setKind("repo")}
+        >
+          Repo
+        </button>
+      </div>
       {kind !== "all" ? (
         <>
           <input
+            ref={inputRef}
             className="field"
-            style={{ width: 200 }}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
             list={options?.length ? listId : undefined}
+            value={value}
             placeholder={
               options?.length
                 ? `pick or type — ${options.length} available`
                 : kind === "org"
-                  ? "waviisoft"
+                  ? "organization"
                   : "owner/name"
             }
-            aria-label="Scope value"
+            aria-label={`${kind} to triage`}
+            onChange={(e) => {
+              const v = e.target.value;
+              setValue(v);
+              // An exact match to a listed option means it was picked → apply.
+              if (options?.includes(v)) applyValue(v);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                applyValue(value);
+              }
+            }}
           />
           {options?.length ? (
             <datalist id={listId}>
@@ -463,12 +551,12 @@ function ScopeSwitcher({
               ))}
             </datalist>
           ) : null}
+          <div className="scope-hint">
+            Pick from the list, or type and press Enter.
+          </div>
         </>
       ) : null}
-      <button className="btn" type="submit">
-        Go
-      </button>
-    </form>
+    </div>
   );
 }
 
