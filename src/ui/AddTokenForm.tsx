@@ -1,6 +1,5 @@
 import { useState } from "react";
-
-const PAT_URL = "https://github.com/settings/personal-access-tokens/new";
+import { NEW_PAT_URL } from "./links";
 
 /**
  * Add-a-token form shared by the first-run gate and the token manager. `onAdd`
@@ -83,7 +82,7 @@ export function AddTokenForm({
           )}
         </button>
         {showCreateLink ? (
-          <a className="btn" href={PAT_URL} target="_blank" rel="noreferrer">
+          <a className="btn" href={NEW_PAT_URL} target="_blank" rel="noreferrer">
             Create a token ↗
           </a>
         ) : null}

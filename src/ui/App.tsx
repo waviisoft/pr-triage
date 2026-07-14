@@ -23,6 +23,7 @@ import {
 } from "../github/client";
 import { Bucket } from "./Bucket";
 import { IconPencil, IconRefresh, IconSettings } from "./icons";
+import { GITHUB_BASE } from "./links";
 import { Tile } from "./Tile";
 import { TokenGate } from "./TokenGate";
 import { TokenManager } from "./TokenManager";
@@ -77,12 +78,12 @@ function persistScope(scope: Scope): void {
 
 /** The GitHub page that best mirrors a scope, for the scope-line link. */
 function githubUrlForScope(scope: Scope): string {
-  if (scope.kind === "repo") return `https://github.com/${scope.value}/pulls`;
+  if (scope.kind === "repo") return `${GITHUB_BASE}/${scope.value}/pulls`;
   if (scope.kind === "org")
-    return `https://github.com/pulls?q=${encodeURIComponent(
+    return `${GITHUB_BASE}/pulls?q=${encodeURIComponent(
       `is:open is:pr archived:false involves:@me org:${scope.value}`,
     )}`;
-  return "https://github.com/pulls";
+  return `${GITHUB_BASE}/pulls`;
 }
 
 function initialTheme(): Theme {
@@ -340,7 +341,7 @@ export function App() {
                 {" · viewed as "}
                 <a
                   className="viewer"
-                  href={`https://github.com/${viewer}`}
+                  href={`${GITHUB_BASE}/${viewer}`}
                   target="_blank"
                   rel="noreferrer"
                 >
