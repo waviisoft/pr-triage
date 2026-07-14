@@ -167,6 +167,7 @@ a {
 .app-footer a.footer-link-icon {
   display: inline-flex;
   align-items: center;
+  vertical-align: middle;
   gap: 4px;
   border-bottom: none;
 }
