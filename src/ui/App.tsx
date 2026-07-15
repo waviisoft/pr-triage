@@ -435,55 +435,53 @@ export function App() {
   return (
     <div className="app" style={{ "--num-col": numCol } as React.CSSProperties}>
       <header className="header">
-        <div>
-          <div className="brand">
-            <IconLogo size={30} />
-            <h1>PR Triage</h1>
-          </div>
-          <div className="scope-line">
-            <a
-              className="scope-link"
-              href={githubUrlForScope(viewScope)}
-              target="_blank"
-              rel="noreferrer"
-              title="Open on GitHub ↗"
+        <div className="brand">
+          <IconLogo size={30} />
+          <h1>PR Triage</h1>
+        </div>
+        <div className="scope-line">
+          <a
+            className="scope-link"
+            href={githubUrlForScope(viewScope)}
+            target="_blank"
+            rel="noreferrer"
+            title="Open on GitHub ↗"
+          >
+            {scopeLabel}
+          </a>
+          {demo ? null : (
+            <button
+              className="scope-change"
+              onClick={() => setScopePickerOpen((o) => !o)}
+              aria-haspopup="dialog"
+              aria-expanded={scopePickerOpen}
+              aria-label="Change scope"
+              title="Change scope"
             >
-              {scopeLabel}
-            </a>
-            {demo ? null : (
-              <button
-                className="scope-change"
-                onClick={() => setScopePickerOpen((o) => !o)}
-                aria-haspopup="dialog"
-                aria-expanded={scopePickerOpen}
-                aria-label="Change scope"
-                title="Change scope"
+              <IconPencil />
+            </button>
+          )}
+          {viewer ? (
+            <>
+              {" · viewed as "}
+              <a
+                className="viewer"
+                href={`${GITHUB_BASE}/${viewer}`}
+                target="_blank"
+                rel="noreferrer"
               >
-                <IconPencil />
-              </button>
-            )}
-            {viewer ? (
-              <>
-                {" · viewed as "}
-                <a
-                  className="viewer"
-                  href={`${GITHUB_BASE}/${viewer}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  @{viewer}
-                </a>
-              </>
-            ) : null}
-            {scopePickerOpen ? (
-              <ScopePicker
-                scope={scope}
-                catalog={mergedCatalog}
-                onApply={changeScope}
-                onClose={() => setScopePickerOpen(false)}
-              />
-            ) : null}
-          </div>
+                @{viewer}
+              </a>
+            </>
+          ) : null}
+          {scopePickerOpen ? (
+            <ScopePicker
+              scope={scope}
+              catalog={mergedCatalog}
+              onApply={changeScope}
+              onClose={() => setScopePickerOpen(false)}
+            />
+          ) : null}
         </div>
         <div className="header-actions">
           <RefreshButton

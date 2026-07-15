@@ -179,14 +179,22 @@ a {
 }
 
 .header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+  display: grid;
+  /* Title/scope share the left column; the actions sit in their own auto-width
+     column on the right and span both rows so they stay pinned to the top-right.
+     minmax(0, 1fr) lets the left column shrink so long scope text wraps rather
+     than forcing the header wider than the viewport. */
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "brand actions"
+    "scope actions";
+  align-items: start;
+  column-gap: 16px;
   margin-bottom: 24px;
 }
 
 .header .brand {
+  grid-area: brand;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -208,6 +216,7 @@ a {
 }
 
 .header .scope-line {
+  grid-area: scope;
   position: relative;
   color: var(--text-dim);
   font-size: 13px;
@@ -390,6 +399,7 @@ a {
 }
 
 .header-actions {
+  grid-area: actions;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1323,16 +1333,16 @@ a {
   .tiles {
     grid-template-columns: repeat(2, 1fr);
   }
-  /* Keep the header a row on phones so the refresh/settings actions stay pinned
-     to the top-right beside the title, rather than dropping to a left-aligned
-     row underneath it. The title/scope block takes the remaining width and its
-     scope line wraps freely; the actions never shrink. */
+  /* On phones, drop the scope line to its own full-width row *under* the
+     top-right actions so it has the whole width to wrap into, rather than being
+     squeezed into a narrow column beside the icons. row-gap keeps clear space
+     between the buttons above and the scope text flowing beneath them. */
   .header {
-    align-items: flex-start;
-    gap: 12px;
-  }
-  .header > div:first-child {
-    min-width: 0;
+    grid-template-areas:
+      "brand actions"
+      "scope scope";
+    row-gap: 12px;
+    column-gap: 12px;
   }
 
   /* Give the meta its own full-width row so it wraps freely instead of being
