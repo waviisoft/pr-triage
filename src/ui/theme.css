@@ -1323,8 +1323,16 @@ a {
   .tiles {
     grid-template-columns: repeat(2, 1fr);
   }
+  /* Keep the header a row on phones so the refresh/settings actions stay pinned
+     to the top-right beside the title, rather than dropping to a left-aligned
+     row underneath it. The title/scope block takes the remaining width and its
+     scope line wraps freely; the actions never shrink. */
   .header {
-    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .header > div:first-child {
+    min-width: 0;
   }
 
   /* Give the meta its own full-width row so it wraps freely instead of being
