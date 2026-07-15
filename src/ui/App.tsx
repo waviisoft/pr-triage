@@ -136,6 +136,9 @@ export function App() {
   const [tokens, setTokens] = useState<TokenEntry[]>(getTokens);
   const [scope, setScope] = useState<Scope>(loadInitialScope);
   const [scopePickerOpen, setScopePickerOpen] = useState(false);
+  // Whether a multi-target scope shows every target or collapses to the first
+  // one plus a "+N more" toggle, so a long repo list stays a single line.
+  const [scopeExpanded, setScopeExpanded] = useState(false);
   const [viewer, setViewer] = useState<string | null>(null);
   const [view, setView] = useState<TriageView | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
@@ -348,6 +351,9 @@ export function App() {
   const changeScope = useCallback((s: Scope) => {
     setScope(s);
     persistScope(s);
+    // A fresh scope starts collapsed — otherwise switching from an expanded
+    // multi-scope would leave the new one's list expanded too.
+    setScopeExpanded(false);
   }, []);
 
   // Scope picker + access hints draw from the union of every token's catalog
@@ -398,10 +404,16 @@ export function App() {
   // shows) regardless of any real saved scope.
   const viewScope = demo ? DEMO_SCOPE : scope;
   const targets = scopeTargets(viewScope);
+  // Collapse a multi-target scope to its first target + a "+N more" toggle so a
+  // long repo list stays one line; expanding reveals the full comma-joined set.
+  const hasMore = viewScope.kind !== "all" && targets.length > 1;
+  const collapsed = hasMore && !scopeExpanded;
   const scopeLabel =
     viewScope.kind === "all"
       ? "everything accessible to you"
-      : targets.map(targetLabel).join(", ");
+      : collapsed
+        ? targetLabel(targets[0])
+        : targets.map(targetLabel).join(", ");
 
   // When a scoped view comes back empty, explain why. A target absent from every
   // token's catalog is almost certainly the reason (no token is scoped to it /
@@ -435,55 +447,68 @@ export function App() {
   return (
     <div className="app" style={{ "--num-col": numCol } as React.CSSProperties}>
       <header className="header">
-        <div>
-          <div className="brand">
-            <IconLogo size={30} />
-            <h1>PR Triage</h1>
-          </div>
-          <div className="scope-line">
-            <a
-              className="scope-link"
-              href={githubUrlForScope(viewScope)}
-              target="_blank"
-              rel="noreferrer"
-              title="Open on GitHub ↗"
+        <div className="brand">
+          <IconLogo size={30} />
+          <h1>PR Triage</h1>
+        </div>
+        <div className="scope-line">
+          <a
+            className="scope-link"
+            href={githubUrlForScope(viewScope)}
+            target="_blank"
+            rel="noreferrer"
+            title="Open on GitHub ↗"
+          >
+            {scopeLabel}
+          </a>
+          {hasMore ? (
+            <button
+              type="button"
+              className="scope-more"
+              onClick={() => setScopeExpanded((v) => !v)}
+              aria-expanded={scopeExpanded}
+              title={
+                scopeExpanded
+                  ? "Collapse the scope list"
+                  : `Show all ${targets.length} scopes`
+              }
             >
-              {scopeLabel}
-            </a>
-            {demo ? null : (
-              <button
-                className="scope-change"
-                onClick={() => setScopePickerOpen((o) => !o)}
-                aria-haspopup="dialog"
-                aria-expanded={scopePickerOpen}
-                aria-label="Change scope"
-                title="Change scope"
+              {scopeExpanded ? "show less" : `+${targets.length - 1} more`}
+            </button>
+          ) : null}
+          {demo ? null : (
+            <button
+              className="scope-change"
+              onClick={() => setScopePickerOpen((o) => !o)}
+              aria-haspopup="dialog"
+              aria-expanded={scopePickerOpen}
+              aria-label="Change scope"
+              title="Change scope"
+            >
+              <IconPencil />
+            </button>
+          )}
+          {viewer ? (
+            <>
+              {" · viewed as "}
+              <a
+                className="viewer"
+                href={`${GITHUB_BASE}/${viewer}`}
+                target="_blank"
+                rel="noreferrer"
               >
-                <IconPencil />
-              </button>
-            )}
-            {viewer ? (
-              <>
-                {" · viewed as "}
-                <a
-                  className="viewer"
-                  href={`${GITHUB_BASE}/${viewer}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  @{viewer}
-                </a>
-              </>
-            ) : null}
-            {scopePickerOpen ? (
-              <ScopePicker
-                scope={scope}
-                catalog={mergedCatalog}
-                onApply={changeScope}
-                onClose={() => setScopePickerOpen(false)}
-              />
-            ) : null}
-          </div>
+                @{viewer}
+              </a>
+            </>
+          ) : null}
+          {scopePickerOpen ? (
+            <ScopePicker
+              scope={scope}
+              catalog={mergedCatalog}
+              onApply={changeScope}
+              onClose={() => setScopePickerOpen(false)}
+            />
+          ) : null}
         </div>
         <div className="header-actions">
           <RefreshButton

@@ -179,14 +179,22 @@ a {
 }
 
 .header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+  display: grid;
+  /* Title/scope share the left column; the actions sit in their own auto-width
+     column on the right and span both rows so they stay pinned to the top-right.
+     minmax(0, 1fr) lets the left column shrink so long scope text wraps rather
+     than forcing the header wider than the viewport. */
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "brand actions"
+    "scope actions";
+  align-items: start;
+  column-gap: 16px;
   margin-bottom: 24px;
 }
 
 .header .brand {
+  grid-area: brand;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -208,6 +216,7 @@ a {
 }
 
 .header .scope-line {
+  grid-area: scope;
   position: relative;
   color: var(--text-dim);
   font-size: 13px;
@@ -229,6 +238,24 @@ a {
 }
 .scope-link:hover {
   color: var(--accent);
+  border-bottom-color: currentColor;
+}
+
+/* "+N more" / "show less" toggle that collapses a long multi-repo scope to one
+   line. Reads as a link, never wraps away from the label it follows. */
+.scope-more {
+  font: inherit;
+  font-size: 13px;
+  margin-left: 6px;
+  padding: 0;
+  color: var(--accent);
+  background: none;
+  border: none;
+  border-bottom: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.scope-more:hover {
   border-bottom-color: currentColor;
 }
 .scope-change {
@@ -390,6 +417,7 @@ a {
 }
 
 .header-actions {
+  grid-area: actions;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1323,8 +1351,16 @@ a {
   .tiles {
     grid-template-columns: repeat(2, 1fr);
   }
+  /* On phones, drop the scope line to its own full-width row *under* the
+     top-right actions so it has the whole width to wrap into, rather than being
+     squeezed into a narrow column beside the icons. row-gap keeps clear space
+     between the buttons above and the scope text flowing beneath them. */
   .header {
-    flex-direction: column;
+    grid-template-areas:
+      "brand actions"
+      "scope scope";
+    row-gap: 12px;
+    column-gap: 12px;
   }
 
   /* Give the meta its own full-width row so it wraps freely instead of being
