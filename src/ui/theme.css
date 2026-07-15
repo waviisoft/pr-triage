@@ -240,6 +240,24 @@ a {
   color: var(--accent);
   border-bottom-color: currentColor;
 }
+
+/* "+N more" / "show less" toggle that collapses a long multi-repo scope to one
+   line. Reads as a link, never wraps away from the label it follows. */
+.scope-more {
+  font: inherit;
+  font-size: 13px;
+  margin-left: 6px;
+  padding: 0;
+  color: var(--accent);
+  background: none;
+  border: none;
+  border-bottom: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.scope-more:hover {
+  border-bottom-color: currentColor;
+}
 .scope-change {
   display: inline-flex;
   align-items: center;
