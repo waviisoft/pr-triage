@@ -432,6 +432,19 @@ a {
   white-space: nowrap;
 }
 
+/* Count of PRs that changed since the last refresh, beside the Refresh button.
+   A quiet accent pill — present only when something actually moved. */
+.changed-note {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* --------------------------------------------------------------- controls */
 
 .btn {
@@ -994,6 +1007,38 @@ a {
   border: 1px solid color-mix(in srgb, var(--sev, var(--slate)) 30%, transparent);
   border-radius: 999px;
   padding: 3px 10px;
+}
+
+/* "Updated"/"New" marker on a row that moved (or appeared) since the last
+   refresh. A faint accent tint on the whole row plus a strong left rail make the
+   change scannable without fighting the severity stripe for the same edge. */
+.row[data-changed] {
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+.row[data-changed]::before {
+  /* Widen the left rail and blend it toward the accent so a changed row reads as
+     "new" while still carrying its severity hue. */
+  width: 5px;
+  background: color-mix(in srgb, var(--sev, var(--slate)) 55%, var(--accent));
+}
+.change-flag {
+  font-size: 10.5px;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 7px 2px;
+  border-radius: 999px;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.change-flag[data-kind="new"] {
+  color: var(--green);
+  border-color: color-mix(in srgb, var(--green) 40%, transparent);
+  background: color-mix(in srgb, var(--green) 14%, transparent);
 }
 
 /* ------------------------------------------------------------- empty state */

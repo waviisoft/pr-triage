@@ -7,6 +7,12 @@ import {
 } from "react";
 import { buildView, type TriageView } from "../triage/group";
 import {
+  diffView,
+  snapshotView,
+  type ChangeInfo,
+  type SnapshotMap,
+} from "../triage/changes";
+import {
   fetchCatalog,
   fetchTriageForTokens,
   getTokens,
@@ -141,6 +147,11 @@ export function App() {
   const [scopeExpanded, setScopeExpanded] = useState(false);
   const [viewer, setViewer] = useState<string | null>(null);
   const [view, setView] = useState<TriageView | null>(null);
+  // PRs that changed triage group (or newly appeared) since the baseline, keyed
+  // by `prKey`. Drives the per-row "Updated"/"New" markers and the header count.
+  const [changes, setChanges] = useState<Map<string, ChangeInfo>>(
+    () => new Map(),
+  );
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
   const [tokenErrors, setTokenErrors] = useState<TokenError[]>([]);
@@ -169,6 +180,15 @@ export function App() {
   // Reset on every user-initiated load (token/scope change or Refresh).
   const mergeRechecks = useRef(0);
 
+  // Change tracking. `baselineRef` is the snapshot the current highlights are
+  // measured against — it advances only on a manual Refresh (so highlights
+  // persist until you next refresh), stays put across the automatic mergeable
+  // re-poll, and resets to null on a context switch (new scope/tokens).
+  // `shownRef` always mirrors what's on screen, so the next Refresh can adopt it
+  // as the new baseline.
+  const baselineRef = useRef<SnapshotMap | null>(null);
+  const shownRef = useRef<SnapshotMap | null>(null);
+
   useEffect(() => {
     // "system" removes the override so `@media (prefers-color-scheme)` governs
     // and tracks OS changes live; light/dark pin the attribute and win over it.
@@ -181,17 +201,43 @@ export function App() {
     }
   }, [theme]);
 
-  const load = useCallback(async () => {
+  // How a load treats the change baseline:
+  //  - "reset":   context switch (mount, new scope/tokens) — no baseline, so
+  //               nothing is highlighted until something moves.
+  //  - "refresh": a user-driven Refresh — adopt the on-screen state as the new
+  //               baseline and highlight what moved since the previous one.
+  //  - "recheck": the automatic mergeable re-poll — keep the same baseline so
+  //               highlights accumulate rather than reset.
+  type LoadMode = "reset" | "refresh" | "recheck";
+
+  // Diff a freshly built view against the right baseline for `mode`, publish the
+  // highlights, and advance the refs. Centralized so demo and live loads share
+  // exactly one rule.
+  const applyView = useCallback((next: TriageView, mode: LoadMode) => {
+    const baseline =
+      mode === "reset"
+        ? null
+        : mode === "refresh"
+          ? shownRef.current
+          : baselineRef.current;
+    baselineRef.current = baseline;
+    setChanges(diffView(baseline, next));
+    shownRef.current = snapshotView(next);
+    setView(next);
+  }, []);
+
+  const load = useCallback(
+    async (mode: LoadMode = "reset") => {
     if (demo) {
       // Sample board: classify local fixtures through the real pipeline.
       const prs = demoPRs();
       setViewer(DEMO_VIEWER);
-      setView(buildView(prs, DEMO_VIEWER));
       setInvolvedRepos([...new Set(prs.map((p) => p.repository))].sort());
       setTokenErrors([]);
       setPendingRecheck(false);
       setLastUpdated(Date.now());
       setStatus("idle");
+      applyView(buildView(prs, DEMO_VIEWER), mode);
       return;
     }
     if (!tokens.length) return;
@@ -202,7 +248,7 @@ export function App() {
       setViewer(login);
       const use = tokensForScope(scope, tokens, catalogsRef.current);
       const { prs, errors } = await fetchTriageForTokens(use, scope, login);
-      setView(buildView(prs, login));
+      applyView(buildView(prs, login), mode);
       setInvolvedRepos((prev) => {
         const seen = new Set(prev);
         for (const p of prs) seen.add(p.repository);
@@ -216,14 +262,18 @@ export function App() {
       setError(e instanceof Error ? e.message : String(e));
       setStatus("error");
     }
-  }, [demo, tokens, scope]);
+    },
+    [demo, tokens, scope, applyView],
+  );
 
   useEffect(() => {
-    // Fetch on mount and whenever the tokens/scope change. load() flips status
-    // to "loading" synchronously — the standard fetch-on-mount transition.
+    // Fetch on mount and whenever the tokens/scope change. A context switch
+    // starts from a clean baseline ("reset"), so no highlights carry over from a
+    // different scope. load() flips status to "loading" synchronously — the
+    // standard fetch-on-mount transition.
     mergeRechecks.current = 0;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load();
+    void load("reset");
   }, [load]);
 
   // Fetch each token's accessible orgs/repos to populate the scope picker and
@@ -259,7 +309,7 @@ export function App() {
     const id = setTimeout(() => {
       mergeRechecks.current += 1;
       setPendingRecheck(false);
-      void load();
+      void load("recheck");
     }, 4000);
     return () => clearTimeout(id);
   }, [pendingRecheck, status, load]);
@@ -297,7 +347,7 @@ export function App() {
         const catalog = await fetchCatalog(entry.token);
         setCatalogs((prev) => ({ ...prev, [id]: catalog }));
         mergeRechecks.current = 0;
-        void load();
+        void load("refresh");
       } catch {
         // Leave the existing catalog in place; a transient/failed refresh
         // shouldn't blank out what we already know the token can reach.
@@ -511,12 +561,22 @@ export function App() {
           ) : null}
         </div>
         <div className="header-actions">
+          {changes.size > 0 ? (
+            <span
+              className="changed-note"
+              title={`${changes.size} pull request${
+                changes.size === 1 ? "" : "s"
+              } changed since your last refresh`}
+            >
+              {changes.size} changed
+            </span>
+          ) : null}
           <RefreshButton
             lastUpdated={lastUpdated}
             loading={status === "loading"}
             onRefresh={() => {
               mergeRechecks.current = 0;
-              void load();
+              void load("refresh");
             }}
           />
           <SettingsMenu
@@ -570,6 +630,7 @@ export function App() {
             <Bucket
               key={b.bucket}
               view={b}
+              changes={changes}
               emptyNote={
                 b.bucket === "pick-up" && viewScope.kind === "all"
                   ? "Pick a specific org or repo to find unclaimed reviews to grab."

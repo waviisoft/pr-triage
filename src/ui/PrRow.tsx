@@ -1,3 +1,4 @@
+import type { ChangeInfo } from "../triage/changes";
 import type { ClassifiedPR } from "../triage/types";
 import { safeHref } from "./links";
 import { CHIP_LABEL, SEVERITY } from "./severity";
@@ -16,7 +17,14 @@ function relativeTime(iso: string): string {
   return `${Math.round(days / 30)}mo ago`;
 }
 
-export function PrRow({ item }: { item: ClassifiedPR }) {
+export function PrRow({
+  item,
+  change,
+}: {
+  item: ClassifiedPR;
+  /** Set when this PR moved triage group / newly appeared since the last refresh. */
+  change?: ChangeInfo;
+}) {
   const { pr, group, reason, mine } = item;
   const severity = group ? SEVERITY[group] : "slate";
   const chip = group ? CHIP_LABEL[group] : "";
@@ -29,6 +37,7 @@ export function PrRow({ item }: { item: ClassifiedPR }) {
     <a
       className="row"
       data-severity={severity}
+      data-changed={change ? change.kind : undefined}
       href={safeHref(pr.url)}
       target="_blank"
       rel="noreferrer"
@@ -62,6 +71,15 @@ export function PrRow({ item }: { item: ClassifiedPR }) {
       </div>
 
       <div className="row-right">
+        {change ? (
+          <span
+            className="change-flag"
+            data-kind={change.kind}
+            title={change.reason}
+          >
+            {change.kind === "new" ? "New" : "Updated"}
+          </span>
+        ) : null}
         {showCi ? (
           <span
             className="ci-dot"

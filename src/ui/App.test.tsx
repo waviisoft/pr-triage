@@ -4,7 +4,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Mock the GitHub layer so <App/> mounts straight into the dashboard with one
 // saved token and no network.
-const { saveTokens } = vi.hoisted(() => ({ saveTokens: vi.fn() }));
+const { saveTokens, fetchTriage } = vi.hoisted(() => ({
+  saveTokens: vi.fn(),
+  fetchTriage: vi.fn(
+    async (): Promise<{ prs: unknown[]; errors: unknown[] }> => ({
+      prs: [],
+      errors: [],
+    }),
+  ),
+}));
 vi.mock("../github/client", () => ({
   getTokens: () => [{ id: "1", label: "me", token: "tok" }],
   saveTokens,
@@ -12,7 +20,7 @@ vi.mock("../github/client", () => ({
   suggestLabel: () => "auto",
   ownersOf: () => [],
   resolveLogin: vi.fn(async () => "me"),
-  fetchTriageForTokens: vi.fn(async () => ({ prs: [], errors: [] })),
+  fetchTriageForTokens: fetchTriage,
   fetchCatalog: vi.fn(async () => ({ login: "me", orgs: [], repos: [] })),
   tokensForScope: (_scope: unknown, tokens: unknown) => tokens,
   scopeTargets: () => [],
@@ -77,6 +85,63 @@ describe("App — token management", () => {
     );
     // The new label is shown; the editor is gone.
     expect(screen.getByText("work laptop")).toBeTruthy();
+  });
+});
+
+describe("App — changed-since-last-refresh markers", () => {
+  /** A normalized PR shaped enough to classify; overrides steer the bucket. */
+  const pr = (overrides: Record<string, unknown> = {}) => ({
+    number: 42,
+    title: "Wire up the widget",
+    url: "https://github.com/waviisoft/pr-triage/pull/42",
+    isDraft: false,
+    updatedAt: "2026-01-01T00:00:00Z",
+    authorLogin: "me",
+    repository: "waviisoft/pr-triage",
+    mergeable: "MERGEABLE",
+    reviewDecision: "REVIEW_REQUIRED",
+    statusCheckRollup: "SUCCESS",
+    reviewRequests: [{ type: "User", login: "reviewer" }],
+    myReviewState: null,
+    hasReviews: false,
+    ...overrides,
+  });
+
+  it("flags a PR that moved buckets on the next refresh, and counts it", async () => {
+    // First load: the PR is awaiting review (Waiting on others).
+    fetchTriage.mockResolvedValueOnce({ prs: [pr()], errors: [] });
+    render(<App />);
+    await screen.findByText("Wire up the widget");
+
+    // Nothing is highlighted on the very first load — there's no baseline yet.
+    expect(screen.queryByText("Updated")).toBeNull();
+    expect(screen.queryByText(/changed$/)).toBeNull();
+
+    // Second load (Refresh): CI now failing and the reviewer is gone, so the PR
+    // moves into "Needs my attention" — a triage move we should flag.
+    fetchTriage.mockResolvedValueOnce({
+      prs: [pr({ statusCheckRollup: "FAILURE", reviewRequests: [] })],
+      errors: [],
+    });
+    fireEvent.click(screen.getByRole("button", { name: /refresh/i }));
+
+    // The row grows an "Updated" marker and the header shows the count.
+    await screen.findByText("Updated");
+    expect(screen.getByText("1 changed")).toBeTruthy();
+  });
+
+  it("does not flag an unchanged PR across a refresh", async () => {
+    fetchTriage.mockResolvedValueOnce({ prs: [pr()], errors: [] });
+    render(<App />);
+    await screen.findByText("Wire up the widget");
+
+    fetchTriage.mockResolvedValueOnce({ prs: [pr()], errors: [] });
+    fireEvent.click(screen.getByRole("button", { name: /refresh/i }));
+
+    // Give the refresh a chance to resolve, then confirm no marker appeared.
+    await waitFor(() => expect(fetchTriage).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText("Updated")).toBeNull();
+    expect(screen.queryByText(/changed$/)).toBeNull();
   });
 });
 
