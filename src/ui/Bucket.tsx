@@ -1,4 +1,5 @@
 import type { BucketView } from "../triage/group";
+import { prKey, type ChangeInfo } from "../triage/changes";
 import { PrRow } from "./PrRow";
 
 /** Fallback text shown in the dashed empty box per bucket. */
@@ -10,9 +11,12 @@ const EMPTY_MESSAGE: Record<string, string> = {
 
 export function Bucket({
   view,
+  changes,
   emptyNote,
 }: {
   view: BucketView;
+  /** Per-PR change markers (keyed by `prKey`) since the last refresh. */
+  changes?: Map<string, ChangeInfo>;
   /** Overrides the default dashed-box text when the bucket is empty. */
   emptyNote?: string;
 }) {
@@ -31,7 +35,11 @@ export function Bucket({
             <div className="group-label">{section.label}</div>
             <div className="rows">
               {section.prs.map((item) => (
-                <PrRow key={item.pr.url} item={item} />
+                <PrRow
+                  key={item.pr.url}
+                  item={item}
+                  change={changes?.get(prKey(item.pr))}
+                />
               ))}
             </div>
           </div>
